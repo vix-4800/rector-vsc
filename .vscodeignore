@@ -1,0 +1,7 @@
+node_modules/
+out/
+*.vsix
+.vscode-test/
+*.log
+.rector-tmp/
+test.php

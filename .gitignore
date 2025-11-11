@@ -1,0 +1,6 @@
+node_modules/
+out/
+*.vsix
+.rector-tmp/
+test.php
+rector.php

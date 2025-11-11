@@ -1,0 +1,114 @@
+{
+    "name": "rector-vscode",
+    "displayName": "Rector",
+    "description": "Rector - Instant Upgrades and Automated Refactoring",
+    "version": "0.1.0",
+    "publisher": "vix",
+    "engines": {
+        "vscode": "^1.105.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters"
+    ],
+    "keywords": [
+        "php",
+        "rector",
+        "refactoring",
+        "code quality"
+    ],
+    "activationEvents": [
+        "onLanguage:php"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "rector.processFile",
+                "title": "Rector: Process Current File"
+            },
+            {
+                "command": "rector.processFileWithDiff",
+                "title": "Rector: Process Current File (Show Diff)"
+            },
+            {
+                "command": "rector.clearCache",
+                "title": "Rector: Clear Cache"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Rector",
+            "properties": {
+                "rector.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable Rector"
+                },
+                "rector.executablePath": {
+                    "type": "string",
+                    "default": "rector",
+                    "description": "Path to Rector executable"
+                },
+                "rector.configPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to Rector config file (leave empty for auto-detection)"
+                },
+                "rector.enableAutofix": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically apply Rector fixes on save"
+                },
+                "rector.showDiffOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Show diff view before applying changes on save"
+                },
+                "rector.clearCacheBeforeRun": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Clear Rector cache before each run"
+                }
+            }
+        },
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "rector.processFile",
+                    "when": "editorLangId == php"
+                },
+                {
+                    "command": "rector.processFileWithDiff",
+                    "when": "editorLangId == php"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "rector.processFile",
+                    "when": "editorLangId == php",
+                    "group": "1_modification"
+                },
+                {
+                    "command": "rector.processFileWithDiff",
+                    "when": "editorLangId == php",
+                    "group": "1_modification"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src --ext ts"
+    },
+    "devDependencies": {
+        "@types/node": "^24",
+        "@types/vscode": "^1.105",
+        "@typescript-eslint/eslint-plugin": "^8.46",
+        "@typescript-eslint/parser": "^8.46",
+        "eslint": "^9.39",
+        "typescript": "^5.9"
+    }
+}
