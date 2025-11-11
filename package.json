@@ -87,6 +87,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Clear Rector cache before each run"
+                },
+                "rector.timeout": {
+                    "type": "number",
+                    "default": 60000,
+                    "description": "Timeout for Rector process in milliseconds (default: 60000ms = 60s)"
                 }
             }
         },

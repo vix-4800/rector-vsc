@@ -44,12 +44,14 @@ export class RectorRunner {
     executablePath: string;
     configPath: string;
     clearCache: boolean;
+    timeout: number;
   } {
     const config = vscode.workspace.getConfiguration('rector');
     return {
       executablePath: config.get<string>('executablePath', 'rector'),
       configPath: config.get<string>('configPath', ''),
       clearCache: config.get<boolean>('clearCacheBeforeRun', false),
+      timeout: config.get<number>('timeout', 60000),
     };
   }
 
@@ -130,11 +132,20 @@ export class RectorRunner {
     this.log(`Executing: ${commandStr}`);
     this.log(`Working directory: ${path.dirname(filePath)}`);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      this.log(`WARNING: Process timed out after ${config.timeout}ms`);
+    }, config.timeout);
+
     try {
       const { stdout } = await execFile(resolvedExecutable, args, {
         cwd: path.dirname(filePath),
         maxBuffer: 10 * 1024 * 1024,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const output = this.parseJsonOutput(stdout);
 
@@ -167,6 +178,18 @@ export class RectorRunner {
 
       return result;
     } catch (error: any) {
+      clearTimeout(timeoutId);
+
+      if (error.name === 'AbortError') {
+        const errorMsg = `Rector process timed out after ${config.timeout}ms`;
+        this.log(`ERROR: ${errorMsg}`);
+        return {
+          success: false,
+          changedFiles: 0,
+          error: errorMsg,
+        };
+      }
+
       if (error.code === 'ENOENT') {
         const errorMsg = `Rector executable not found: ${config.executablePath}`;
         this.log(`ERROR: ${errorMsg}`);
