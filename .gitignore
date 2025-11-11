@@ -1,6 +1,12 @@
+# IDE files
+.DS_Store
+.vscode/
+.idea/
+
+# Node.js
 node_modules/
 out/
+
 *.vsix
 .rector-tmp/
-test.php
 rector.php
