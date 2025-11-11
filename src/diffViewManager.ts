@@ -8,6 +8,8 @@ export class DiffViewManager {
   private discardStatusBarItem: vscode.StatusBarItem | null = null;
   private pendingChoice: ((value: 'Apply' | 'Discard' | undefined) => void) | null = null;
   private pendingApplyCallback: (() => Promise<void>) | null = null;
+  private currentTmpUri: vscode.Uri | null = null;
+  private closeDocumentListener: vscode.Disposable | null = null;
 
   async showDiff(
     originalUri: vscode.Uri,
@@ -30,6 +32,7 @@ export class DiffViewManager {
 
     await fs.promises.writeFile(tmpFilePath, modifiedContent, 'utf8');
     const tmpUri = vscode.Uri.file(tmpFilePath);
+    this.currentTmpUri = tmpUri;
 
     // Show diff
     const title = `Rector: ${path.basename(originalUri.fsPath)}`;
@@ -42,18 +45,19 @@ export class DiffViewManager {
       // Save callback for status bar buttons
       this.pendingApplyCallback = applyCallback;
 
+      // Set up listener for diff window close
+      this.setupCloseListener();
+
       // Show status bar buttons only
       const choice = await this.showStatusBarChoice();
 
       if (choice === 'Apply') {
         await applyCallback();
         vscode.window.showInformationMessage('Rector changes applied');
-        this.pendingApplyCallback = null;
-        this.hideStatusBarChoice();
+        this.cleanupDiffState();
       } else if (choice === 'Discard') {
         vscode.window.showInformationMessage('Rector changes discarded');
-        this.pendingApplyCallback = null;
-        this.hideStatusBarChoice();
+        this.cleanupDiffState();
       }
     } finally {
       // Clean up temp file
@@ -62,6 +66,37 @@ export class DiffViewManager {
       } catch (error) {
         // Ignore cleanup errors
       }
+    }
+  }
+
+  private setupCloseListener(): void {
+    // Remove previous listener if any
+    if (this.closeDocumentListener) {
+      this.closeDocumentListener.dispose();
+      this.closeDocumentListener = null;
+    }
+
+    // Listen for document close events
+    this.closeDocumentListener = vscode.workspace.onDidCloseTextDocument((document) => {
+      // Check if the closed document is our temporary diff file
+      if (this.currentTmpUri && document.uri.toString() === this.currentTmpUri.toString()) {
+        // Auto-discard when diff window is closed
+        if (this.pendingApplyCallback) {
+          vscode.window.showInformationMessage('Rector changes discarded (diff closed)');
+          this.cleanupDiffState();
+        }
+      }
+    });
+  }
+
+  private cleanupDiffState(): void {
+    this.pendingApplyCallback = null;
+    this.currentTmpUri = null;
+    this.hideStatusBarChoice();
+
+    if (this.closeDocumentListener) {
+      this.closeDocumentListener.dispose();
+      this.closeDocumentListener = null;
     }
   }
 
@@ -114,8 +149,7 @@ export class DiffViewManager {
     if (this.pendingApplyCallback) {
       this.pendingApplyCallback().then(() => {
         vscode.window.showInformationMessage('Rector changes applied');
-        this.pendingApplyCallback = null;
-        this.hideStatusBarChoice();
+        this.cleanupDiffState();
       });
     }
   }
@@ -127,14 +161,12 @@ export class DiffViewManager {
     }
     if (this.pendingApplyCallback) {
       vscode.window.showInformationMessage('Rector changes discarded');
-      this.pendingApplyCallback = null;
-      this.hideStatusBarChoice();
+      this.cleanupDiffState();
     }
   }
 
   dispose(): void {
-    this.hideStatusBarChoice();
-    this.pendingApplyCallback = null;
+    this.cleanupDiffState();
   }
 
     private applyDiff(originalContent: string, diff: string): string | null {
