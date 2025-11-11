@@ -16,12 +16,15 @@ export interface RectorResult {
 
 interface RectorJsonOutput {
   totals: {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     changed_files: number;
     errors: number;
   };
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   file_diffs?: Array<{
     file: string;
     diff: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     applied_rectors: string[];
   }>;
 }
