@@ -49,6 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
     } catch (error) {
+      await diffViewManager.cleanupDiffState();
       vscode.window.showErrorMessage(`Rector error: ${error}`);
     }
   });
@@ -86,6 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage(`Rector failed: ${result.error}`);
         }
       } catch (error) {
+        await diffViewManager.cleanupDiffState();
         vscode.window.showErrorMessage(`Rector error: ${error}`);
       }
     }
