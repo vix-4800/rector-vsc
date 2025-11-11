@@ -11,6 +11,7 @@ export class DiffViewManager {
   private currentTmpUri: vscode.Uri | null = null;
   private currentTmpFilePath: string | null = null;
   private closeDocumentListener: vscode.Disposable | null = null;
+  private isApplying = false;
 
   async showDiff(
     originalUri: vscode.Uri,
@@ -48,13 +49,23 @@ export class DiffViewManager {
       const choice = await this.showStatusBarChoice();
 
       if (choice === 'Apply') {
-        await applyCallback();
-        vscode.window.showInformationMessage('Rector changes applied');
+        if (!this.isApplying) {
+          this.isApplying = true;
+          try {
+            await applyCallback();
+            vscode.window.showInformationMessage('Rector changes applied');
+          } finally {
+            this.isApplying = false;
+          }
+        }
         await this.cleanupDiffState();
       } else if (choice === 'Discard') {
         vscode.window.showInformationMessage('Rector changes discarded');
         await this.cleanupDiffState();
       }
+    } catch (error) {
+      await this.cleanupDiffState();
+      throw error;
     } finally {
       if (this.currentTmpFilePath) {
         try {
@@ -82,8 +93,9 @@ export class DiffViewManager {
     });
   }
 
-  private async cleanupDiffState(): Promise<void> {
+  async cleanupDiffState(): Promise<void> {
     this.pendingApplyCallback = null;
+    this.isApplying = false;
 
     if (this.currentTmpFilePath) {
       try {
@@ -145,15 +157,13 @@ export class DiffViewManager {
   }
 
   handleApplyChoice(): void {
+    if (this.isApplying) {
+      return;
+    }
+
     if (this.pendingChoice) {
       this.pendingChoice('Apply');
       this.pendingChoice = null;
-    }
-    if (this.pendingApplyCallback) {
-      this.pendingApplyCallback().then(() => {
-        vscode.window.showInformationMessage('Rector changes applied');
-        this.cleanupDiffState();
-      });
     }
   }
 
@@ -161,10 +171,6 @@ export class DiffViewManager {
     if (this.pendingChoice) {
       this.pendingChoice('Discard');
       this.pendingChoice = null;
-    }
-    if (this.pendingApplyCallback) {
-      vscode.window.showInformationMessage('Rector changes discarded');
-      this.cleanupDiffState();
     }
   }
 
