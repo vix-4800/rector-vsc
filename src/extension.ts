@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { RectorCodeLensProvider } from './codeLensProvider';
 import { DiffViewManager } from './diffViewManager';
 import { RectorRunner } from './rectorRunner';
 
@@ -140,6 +141,12 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  const codeLensProvider = new RectorCodeLensProvider();
+  const codeLensProviderDisposable = vscode.languages.registerCodeLensProvider(
+    { language: 'php', scheme: 'file' },
+    codeLensProvider
+  );
+
   context.subscriptions.push(
     outputChannel,
     diffViewManager,
@@ -149,7 +156,8 @@ export function activate(context: vscode.ExtensionContext) {
     showOutputCommand,
     applyDiffChangesCommand,
     discardDiffChangesCommand,
-    onSaveListener
+    onSaveListener,
+    codeLensProviderDisposable
   );
 }
 

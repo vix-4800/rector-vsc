@@ -8,6 +8,7 @@ code.
 - Apply Rector refactoring rules to current file
 - Preview changes before applying with diff view
 - Optional auto-fix on file save
+- **CodeLens buttons** for quick access to Rector commands directly in PHP files
 - Automatic Rector config file detection
 - Clear Rector cache
 - Output channel with detailed logging of Rector commands and results
@@ -88,6 +89,15 @@ Commands are available via:
 - Default: `false`
 - Description: Clear Rector cache before each run
 
+### `rector.enableCodeLens`
+
+- Type: `boolean`
+- Default: `true`
+- Description: Enable/disable CodeLens buttons in PHP files for quick access to Rector commands
+- Note: CodeLens buttons appear at the top of each PHP file and provide quick actions:
+  - **Run Rector** - Apply changes immediately
+  - **Run Rector (Show Diff)** - Preview changes before applying
+
 ## Example Configuration
 
 Add to `.vscode/settings.json`:
@@ -98,7 +108,8 @@ Add to `.vscode/settings.json`:
   "rector.executablePath": "./vendor/bin/rector",
   "rector.configPath": "./rector.php",
   "rector.enableAutofix": false,
-  "rector.showDiffOnSave": false
+  "rector.showDiffOnSave": false,
+  "rector.enableCodeLens": true
 }
 ```
 

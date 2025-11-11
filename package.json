@@ -92,6 +92,11 @@
                     "type": "number",
                     "default": 60000,
                     "description": "Timeout for Rector process in milliseconds (default: 60000ms = 60s)"
+                },
+                "rector.enableCodeLens": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable CodeLens buttons for running Rector in PHP files"
                 }
             }
         },
