@@ -9,6 +9,7 @@ export class DiffViewManager {
   private pendingChoice: ((value: 'Apply' | 'Discard' | undefined) => void) | null = null;
   private pendingApplyCallback: (() => Promise<void>) | null = null;
   private currentTmpUri: vscode.Uri | null = null;
+  private currentTmpFilePath: string | null = null;
   private closeDocumentListener: vscode.Disposable | null = null;
 
   async showDiff(
@@ -33,6 +34,7 @@ export class DiffViewManager {
     await fs.promises.writeFile(tmpFilePath, modifiedContent, 'utf8');
     const tmpUri = vscode.Uri.file(tmpFilePath);
     this.currentTmpUri = tmpUri;
+    this.currentTmpFilePath = tmpFilePath;
 
     // Show diff
     const title = `Rector: ${path.basename(originalUri.fsPath)}`;
@@ -54,17 +56,19 @@ export class DiffViewManager {
       if (choice === 'Apply') {
         await applyCallback();
         vscode.window.showInformationMessage('Rector changes applied');
-        this.cleanupDiffState();
+        await this.cleanupDiffState();
       } else if (choice === 'Discard') {
         vscode.window.showInformationMessage('Rector changes discarded');
-        this.cleanupDiffState();
+        await this.cleanupDiffState();
       }
     } finally {
-      // Clean up temp file
-      try {
-        await fs.promises.unlink(tmpFilePath);
-      } catch (error) {
-        // Ignore cleanup errors
+      // Clean up temp file if it still exists
+      if (this.currentTmpFilePath) {
+        try {
+          await fs.promises.unlink(this.currentTmpFilePath);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
       }
     }
   }
@@ -89,8 +93,22 @@ export class DiffViewManager {
     });
   }
 
-  private cleanupDiffState(): void {
+  private async cleanupDiffState(): Promise<void> {
     this.pendingApplyCallback = null;
+
+    // Clean up temp file
+    if (this.currentTmpFilePath) {
+      try {
+        // Check if file exists before trying to delete
+        if (fs.existsSync(this.currentTmpFilePath)) {
+          await fs.promises.unlink(this.currentTmpFilePath);
+        }
+      } catch (error) {
+        // Ignore cleanup errors (file might already be deleted)
+      }
+      this.currentTmpFilePath = null;
+    }
+
     this.currentTmpUri = null;
     this.hideStatusBarChoice();
 
