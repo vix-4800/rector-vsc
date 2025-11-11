@@ -27,6 +27,19 @@ interface RectorJsonOutput {
 }
 
 export class RectorRunner {
+  private outputChannel: vscode.OutputChannel | null = null;
+
+  constructor(outputChannel?: vscode.OutputChannel) {
+    this.outputChannel = outputChannel || null;
+  }
+
+  private log(message: string): void {
+    if (this.outputChannel) {
+      const timestamp = new Date().toLocaleTimeString();
+      this.outputChannel.appendLine(`[${timestamp}] ${message}`);
+    }
+  }
+
   private getConfig(): {
     executablePath: string;
     configPath: string;
@@ -90,6 +103,7 @@ export class RectorRunner {
       const foundConfig = this.findConfigFile(filePath);
       if (foundConfig) {
         configPath = foundConfig;
+        this.log(`Auto-detected config file: ${configPath}`);
       }
     } else {
       // Resolve relative config path
@@ -102,10 +116,12 @@ export class RectorRunner {
 
       // Validate the specified config path
       if (!fs.existsSync(configPath)) {
+        const error = `Config file not found: ${configPath}`;
+        this.log(`ERROR: ${error}`);
         return {
           success: false,
           changedFiles: 0,
-          error: `Config file not found: ${configPath}`,
+          error,
         };
       }
     }
@@ -113,6 +129,11 @@ export class RectorRunner {
     if (configPath) {
       args.push('--config=' + configPath);
     }
+
+    // Log the command being executed
+    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+    this.log(`Executing: ${commandStr}`);
+    this.log(`Working directory: ${path.dirname(filePath)}`);
 
     try {
       const { stdout } = await execFile(resolvedExecutable, args, {
@@ -124,6 +145,7 @@ export class RectorRunner {
       const output = this.parseJsonOutput(stdout);
 
       if (!output) {
+        this.log('ERROR: Failed to parse Rector output');
         return {
           success: false,
           changedFiles: 0,
@@ -140,16 +162,25 @@ export class RectorRunner {
         const fileDiff = output.file_diffs[0];
         result.diff = fileDiff.diff;
         result.appliedRectors = fileDiff.applied_rectors;
+
+        this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+        if (result.appliedRectors && result.appliedRectors.length > 0) {
+          this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
+        }
+      } else {
+        this.log('SUCCESS: No changes needed');
       }
 
       return result;
     } catch (error: any) {
       // Check if it's an execution error (e.g., Rector not found)
       if (error.code === 'ENOENT') {
+        const errorMsg = `Rector executable not found: ${config.executablePath}`;
+        this.log(`ERROR: ${errorMsg}`);
         return {
           success: false,
           changedFiles: 0,
-          error: `Rector executable not found: ${config.executablePath}`,
+          error: errorMsg,
         };
       }
 
@@ -167,6 +198,13 @@ export class RectorRunner {
               const fileDiff = output.file_diffs[0];
               result.diff = fileDiff.diff;
               result.appliedRectors = fileDiff.applied_rectors;
+
+              this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+              if (result.appliedRectors && result.appliedRectors.length > 0) {
+                this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
+              }
+            } else {
+              this.log('SUCCESS: No changes needed');
             }
 
             return result;
@@ -176,10 +214,12 @@ export class RectorRunner {
         }
       }
 
+      const errorMsg = error.message || error.stderr || 'Unknown error';
+      this.log(`ERROR: ${errorMsg}`);
       return {
         success: false,
         changedFiles: 0,
-        error: error.message || error.stderr || 'Unknown error',
+        error: errorMsg,
       };
     }
   }
@@ -203,13 +243,20 @@ export class RectorRunner {
     const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
     const args = ['process', '--clear-cache'];
 
+    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+    this.log(`Executing: ${commandStr}`);
+
     try {
       await execFile(resolvedExecutable, args);
+      this.log('SUCCESS: Cache cleared');
     } catch (error: any) {
       // Check if it's an execution error (e.g., Rector not found)
       if (error.code === 'ENOENT') {
-        throw new Error(`Rector executable not found: ${config.executablePath}`);
+        const errorMsg = `Rector executable not found: ${config.executablePath}`;
+        this.log(`ERROR: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
+      this.log('WARNING: Cache clearing might have failed, but continuing');
       // Ignore other errors - cache clearing might fail but that's ok
     }
   }

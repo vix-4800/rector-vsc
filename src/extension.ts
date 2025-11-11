@@ -5,7 +5,12 @@ import { RectorRunner } from './rectorRunner';
 export function activate(context: vscode.ExtensionContext) {
   console.log('Rector extension is now active');
 
-  const rectorRunner = new RectorRunner();
+  // Create output channel for logging
+  const outputChannel = vscode.window.createOutputChannel('PHP Rector');
+  outputChannel.appendLine('PHP Rector extension activated');
+  outputChannel.appendLine('---');
+
+  const rectorRunner = new RectorRunner(outputChannel);
   const diffViewManager = new DiffViewManager();
 
   // Register command to process file directly
@@ -115,6 +120,11 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Register command to show output channel
+  const showOutputCommand = vscode.commands.registerCommand('rector.showOutput', () => {
+    outputChannel.show();
+  });
+
   // Auto-fix on save
   const onSaveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
     const config = vscode.workspace.getConfiguration('rector');
@@ -142,9 +152,11 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(
+    outputChannel,
     processFileCommand,
     processFileWithDiffCommand,
     clearCacheCommand,
+    showOutputCommand,
     onSaveListener
   );
 }

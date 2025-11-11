@@ -34,6 +34,10 @@
             {
                 "command": "rector.clearCache",
                 "title": "Rector: Clear Cache"
+            },
+            {
+                "command": "rector.showOutput",
+                "title": "Rector: Show Output"
             }
         ],
         "configuration": {
