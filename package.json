@@ -117,12 +117,12 @@
             "editor/title": [
                 {
                     "command": "rector.applyDiffChanges",
-                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/",
+                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/ || resourceFilename =~ /\\\\.rector\\\\.tmp\\\\.php$/",
                     "group": "navigation@1"
                 },
                 {
                     "command": "rector.discardDiffChanges",
-                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/",
+                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/ || resourceFilename =~ /\\\\.rector\\\\.tmp\\\\.php$/",
                     "group": "navigation@2"
                 }
             ],

@@ -27,8 +27,9 @@ export class DiffViewManager {
     }
 
     const tmpDir = await this.getTempDir();
-    const tmpFileName = `${path.basename(originalUri.fsPath)}.rector.tmp.php`;
-    const tmpFilePath = path.join(tmpDir, tmpFileName);
+    const baseName = path.basename(originalUri.fsPath);
+    const tmpFileName = `${baseName}.rector.tmp.php`;
+    const tmpFilePath = path.normalize(path.join(tmpDir, tmpFileName));
 
     await fs.promises.writeFile(tmpFilePath, modifiedContent, 'utf8');
     const tmpUri = vscode.Uri.file(tmpFilePath);
