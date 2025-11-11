@@ -42,11 +42,8 @@ export class DiffViewManager {
       // Save callback for status bar buttons
       this.pendingApplyCallback = applyCallback;
 
-      // Show quick pick dialog (with timeout) AND status bar buttons
-      const choice = await Promise.race([
-        this.showDialogChoice(),
-        this.showStatusBarChoice(),
-      ]);
+      // Show status bar buttons only
+      const choice = await this.showStatusBarChoice();
 
       if (choice === 'Apply') {
         await applyCallback();
@@ -57,13 +54,6 @@ export class DiffViewManager {
         vscode.window.showInformationMessage('Rector changes discarded');
         this.pendingApplyCallback = null;
         this.hideStatusBarChoice();
-      } else {
-        // Dialog was closed/timed out - show hint about status bar
-        // Status bar buttons remain visible for later use
-        vscode.window.showInformationMessage(
-          'Rector diff is open. Use the buttons in the status bar to Apply or Discard changes.',
-          'Got it'
-        );
       }
     } finally {
       // Clean up temp file
@@ -73,15 +63,6 @@ export class DiffViewManager {
         // Ignore cleanup errors
       }
     }
-  }
-
-  private async showDialogChoice(): Promise<'Apply' | 'Discard' | undefined> {
-    return await vscode.window.showInformationMessage(
-      'Apply Rector changes?',
-      { modal: false },
-      'Apply',
-      'Discard'
-    );
   }
 
   private showStatusBarChoice(): Promise<'Apply' | 'Discard' | undefined> {

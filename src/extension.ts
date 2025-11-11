@@ -77,33 +77,22 @@ export function activate(context: vscode.ExtensionContext) {
       await editor.document.save();
 
       try {
-        vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Running Rector...',
-            cancellable: false,
-          },
-          async () => {
-            const result = await rectorRunner.processFile(editor.document.uri.fsPath, true);
+        const result = await rectorRunner.processFile(editor.document.uri.fsPath, true);
 
-            if (result.success) {
-              if (result.changedFiles > 0 && result.diff) {
-                // Show diff view
-                await diffViewManager.showDiff(editor.document.uri, result.diff, async () => {
-                  // Apply changes callback
-                  await rectorRunner.processFile(editor.document.uri.fsPath, false);
-                  const document = await vscode.workspace.openTextDocument(editor.document.uri);
-                  await vscode.window.showTextDocument(document);
-                  vscode.window.showInformationMessage('Rector changes applied');
-                });
-              } else {
-                vscode.window.showInformationMessage('Rector: No changes needed');
-              }
-            } else {
-              vscode.window.showErrorMessage(`Rector failed: ${result.error}`);
-            }
+        if (result.success) {
+          if (result.changedFiles > 0 && result.diff) {
+            // Show diff view
+            await diffViewManager.showDiff(editor.document.uri, result.diff, async () => {
+              await rectorRunner.processFile(editor.document.uri.fsPath, false);
+              const document = await vscode.workspace.openTextDocument(editor.document.uri);
+              await vscode.window.showTextDocument(document);
+            });
+          } else {
+            vscode.window.showInformationMessage('Rector: No changes needed');
           }
-        );
+        } else {
+          vscode.window.showErrorMessage(`Rector failed: ${result.error}`);
+        }
       } catch (error) {
         vscode.window.showErrorMessage(`Rector error: ${error}`);
       }
