@@ -16,13 +16,13 @@ export interface RectorResult {
 
 interface RectorJsonOutput {
   totals: {
-    changed_files: number;
+    changedFiles: number;
     errors: number;
   };
-  file_diffs?: Array<{
+  fileDiffs?: Array<{
     file: string;
     diff: string;
-    applied_rectors: string[];
+    appliedRectors: string[];
   }>;
 }
 
@@ -149,15 +149,15 @@ export class RectorRunner {
 
       const result: RectorResult = {
         success: true,
-        changedFiles: output.totals.changed_files,
+        changedFiles: output.totals.changedFiles,
       };
 
-      if (output.file_diffs && output.file_diffs.length > 0) {
-        const fileDiff = output.file_diffs[0];
+      if (output.fileDiffs && output.fileDiffs.length > 0) {
+        const fileDiff = output.fileDiffs[0];
         result.diff = fileDiff.diff;
-        result.appliedRectors = fileDiff.applied_rectors;
+        result.appliedRectors = fileDiff.appliedRectors;
 
-        this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+        this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
         if (result.appliedRectors && result.appliedRectors.length > 0) {
           this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
         }
@@ -183,15 +183,15 @@ export class RectorRunner {
           if (output) {
             const result: RectorResult = {
               success: true,
-              changedFiles: output.totals.changed_files,
+              changedFiles: output.totals.changedFiles,
             };
 
-            if (output.file_diffs && output.file_diffs.length > 0) {
-              const fileDiff = output.file_diffs[0];
+            if (output.fileDiffs && output.fileDiffs.length > 0) {
+              const fileDiff = output.fileDiffs[0];
               result.diff = fileDiff.diff;
-              result.appliedRectors = fileDiff.applied_rectors;
+              result.appliedRectors = fileDiff.appliedRectors;
 
-              this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+              this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
               if (result.appliedRectors && result.appliedRectors.length > 0) {
                 this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
               }
