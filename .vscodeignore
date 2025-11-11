@@ -1,7 +1,16 @@
 node_modules/
 out/
+out/test/**
 *.vsix
 .vscode-test/
 *.log
 .rector-tmp/
 test.php
+src/**
+.github/**
+.gitignore
+tsconfig.json
+**/*.map
+**/*.ts
+.eslintrc.json
+.mocharc.json

@@ -10,3 +10,6 @@ out/
 *.vsix
 .rector-tmp/
 rector.php
+
+# Test files
+.vscode-test/
