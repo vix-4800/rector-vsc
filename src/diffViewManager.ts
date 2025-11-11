@@ -17,7 +17,6 @@ export class DiffViewManager {
     diff: string,
     applyCallback: () => Promise<void>
   ): Promise<void> {
-    // Create temporary file with the proposed changes
     const originalContent = await fs.promises.readFile(originalUri.fsPath, 'utf8');
     const modifiedContent = this.applyDiff(originalContent, diff);
 
@@ -26,7 +25,6 @@ export class DiffViewManager {
       return;
     }
 
-    // Create temporary file
     const tmpDir = await this.getTempDir();
     const tmpFileName = `${path.basename(originalUri.fsPath)}.rector.tmp.php`;
     const tmpFilePath = path.join(tmpDir, tmpFileName);
@@ -36,7 +34,6 @@ export class DiffViewManager {
     this.currentTmpUri = tmpUri;
     this.currentTmpFilePath = tmpFilePath;
 
-    // Show diff
     const title = `Rector: ${path.basename(originalUri.fsPath)}`;
 
     try {
@@ -44,13 +41,10 @@ export class DiffViewManager {
         preview: false,
       });
 
-      // Save callback for status bar buttons
       this.pendingApplyCallback = applyCallback;
 
-      // Set up listener for diff window close
       this.setupCloseListener();
 
-      // Show status bar buttons only
       const choice = await this.showStatusBarChoice();
 
       if (choice === 'Apply') {
@@ -62,11 +56,10 @@ export class DiffViewManager {
         await this.cleanupDiffState();
       }
     } finally {
-      // Clean up temp file if it still exists
       if (this.currentTmpFilePath) {
         try {
           await fs.promises.unlink(this.currentTmpFilePath);
-        } catch (error) {
+        } catch {
           // Ignore cleanup errors
         }
       }
@@ -74,17 +67,13 @@ export class DiffViewManager {
   }
 
   private setupCloseListener(): void {
-    // Remove previous listener if any
     if (this.closeDocumentListener) {
       this.closeDocumentListener.dispose();
       this.closeDocumentListener = null;
     }
 
-    // Listen for document close events
     this.closeDocumentListener = vscode.workspace.onDidCloseTextDocument((document) => {
-      // Check if the closed document is our temporary diff file
       if (this.currentTmpUri && document.uri.toString() === this.currentTmpUri.toString()) {
-        // Auto-discard when diff window is closed
         if (this.pendingApplyCallback) {
           vscode.window.showInformationMessage('Rector changes discarded (diff closed)');
           this.cleanupDiffState();
@@ -96,15 +85,13 @@ export class DiffViewManager {
   private async cleanupDiffState(): Promise<void> {
     this.pendingApplyCallback = null;
 
-    // Clean up temp file
     if (this.currentTmpFilePath) {
       try {
-        // Check if file exists before trying to delete
         if (fs.existsSync(this.currentTmpFilePath)) {
           await fs.promises.unlink(this.currentTmpFilePath);
         }
-      } catch (error) {
-        // Ignore cleanup errors (file might already be deleted)
+      } catch {
+        // Ignore cleanup errors
       }
       this.currentTmpFilePath = null;
     }
@@ -122,7 +109,6 @@ export class DiffViewManager {
     return new Promise((resolve) => {
       this.pendingChoice = resolve;
 
-      // Create Apply button
       this.applyStatusBarItem = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
         1000
@@ -135,7 +121,6 @@ export class DiffViewManager {
       this.applyStatusBarItem.tooltip = 'Apply the Rector changes shown in diff';
       this.applyStatusBarItem.show();
 
-      // Create Discard button
       this.discardStatusBarItem = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
         999
@@ -187,76 +172,66 @@ export class DiffViewManager {
     this.cleanupDiffState();
   }
 
-    private applyDiff(originalContent: string, diff: string): string | null {
-        try {
-            // For unified diff, we'll use a simpler approach:
-            // Parse the diff and apply changes line by line
-            const lines = diff.split('\n');
-            const originalLines = originalContent.split('\n');
-            const result: string[] = [];
+  private applyDiff(originalContent: string, diff: string): string | null {
+    try {
+      const lines = diff.split('\n');
+      const originalLines = originalContent.split('\n');
+      const result: string[] = [];
 
-            let originalIndex = 0;
-            let inHeader = true;
+      let originalIndex = 0;
+      let inHeader = true;
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
 
-                // Skip diff header lines (---, +++, @@)
-                if (line.startsWith('---') || line.startsWith('+++')) {
-                    continue;
-                }
-
-                // Parse hunk header: @@ -oldStart,oldLines +newStart,newLines @@
-                if (line.startsWith('@@')) {
-                    const match = line.match(/@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/);
-                    if (match) {
-                        const oldStart = parseInt(match[1], 10);
-                        // Copy lines before this hunk
-                        while (originalIndex < oldStart - 1) {
-                            result.push(originalLines[originalIndex]);
-                            originalIndex++;
-                        }
-                        inHeader = false;
-                    }
-                    continue;
-                }
-
-                if (inHeader) {
-                    continue;
-                }
-
-                if (line.startsWith('-')) {
-                    // Line removed - skip the corresponding original line
-                    originalIndex++;
-                } else if (line.startsWith('+')) {
-                    // Line added - add to result
-                    result.push(line.substring(1));
-                } else if (line.startsWith(' ')) {
-                    // Context line - copy from original
-                    result.push(originalLines[originalIndex]);
-                    originalIndex++;
-                } else if (line.trim() === '') {
-                    // Empty line - might be context
-                    if (originalIndex < originalLines.length && originalLines[originalIndex].trim() === '') {
-                        result.push('');
-                        originalIndex++;
-                    }
-                }
-            }
-
-            // Copy remaining lines
-            while (originalIndex < originalLines.length) {
-                result.push(originalLines[originalIndex]);
-                originalIndex++;
-            }
-
-            return result.join('\n');
-        } catch (error) {
-            console.error('Failed to apply diff:', error);
-            return null;
+        if (line.startsWith('---') || line.startsWith('+++')) {
+          continue;
         }
-    }  private async getTempDir(): Promise<string> {
-    // Use workspace folder's temp directory or system temp
+
+        if (line.startsWith('@@')) {
+          const match = line.match(/@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/);
+          if (match) {
+            const oldStart = parseInt(match[1], 10);
+            while (originalIndex < oldStart - 1) {
+              result.push(originalLines[originalIndex]);
+              originalIndex++;
+            }
+            inHeader = false;
+          }
+          continue;
+        }
+
+        if (inHeader) {
+          continue;
+        }
+
+        if (line.startsWith('-')) {
+          originalIndex++;
+        } else if (line.startsWith('+')) {
+          result.push(line.substring(1));
+        } else if (line.startsWith(' ')) {
+          result.push(originalLines[originalIndex]);
+          originalIndex++;
+        } else if (line.trim() === '') {
+          if (originalIndex < originalLines.length && originalLines[originalIndex].trim() === '') {
+            result.push('');
+            originalIndex++;
+          }
+        }
+      }
+
+      while (originalIndex < originalLines.length) {
+        result.push(originalLines[originalIndex]);
+        originalIndex++;
+      }
+
+      return result.join('\n');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private async getTempDir(): Promise<string> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     let tmpDir: string;
 
@@ -266,10 +241,9 @@ export class DiffViewManager {
       tmpDir = path.join(os.tmpdir(), 'rector-vscode');
     }
 
-    // Create directory if it doesn't exist
     try {
       await fs.promises.mkdir(tmpDir, { recursive: true });
-    } catch (error) {
+    } catch {
       // Directory might already exist
     }
 

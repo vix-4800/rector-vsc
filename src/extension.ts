@@ -3,17 +3,12 @@ import { DiffViewManager } from './diffViewManager';
 import { RectorRunner } from './rectorRunner';
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Rector extension is now active');
-
-  // Create output channel for logging
   const outputChannel = vscode.window.createOutputChannel('PHP Rector');
   outputChannel.appendLine('PHP Rector extension activated');
   outputChannel.appendLine('---');
 
   const rectorRunner = new RectorRunner(outputChannel);
   const diffViewManager = new DiffViewManager();
-
-  // Register command to process file directly
   const processFileCommand = vscode.commands.registerCommand('rector.processFile', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -43,7 +38,6 @@ export function activate(context: vscode.ExtensionContext) {
               vscode.window.showInformationMessage(
                 `Rector: ${result.changedFiles} file(s) changed`
               );
-              // Reload the file
               const document = await vscode.workspace.openTextDocument(editor.document.uri);
               await vscode.window.showTextDocument(document);
             } else {
@@ -59,7 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Register command to process file with diff view
   const processFileWithDiffCommand = vscode.commands.registerCommand(
     'rector.processFileWithDiff',
     async () => {
@@ -81,7 +74,6 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (result.success) {
           if (result.changedFiles > 0 && result.diff) {
-            // Show diff view
             await diffViewManager.showDiff(editor.document.uri, result.diff, async () => {
               await rectorRunner.processFile(editor.document.uri.fsPath, false);
               const document = await vscode.workspace.openTextDocument(editor.document.uri);
@@ -99,7 +91,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Register command to clear cache
   const clearCacheCommand = vscode.commands.registerCommand('rector.clearCache', async () => {
     try {
       await rectorRunner.clearCache();
@@ -109,18 +100,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Register command to show output channel
   const showOutputCommand = vscode.commands.registerCommand('rector.showOutput', () => {
     outputChannel.show();
   });
 
-  // Register commands for status bar buttons
-  const applyDiffChangesCommand = vscode.commands.registerCommand(
-    'rector.applyDiffChanges',
-    () => {
-      diffViewManager.handleApplyChoice();
-    }
-  );
+  const applyDiffChangesCommand = vscode.commands.registerCommand('rector.applyDiffChanges', () => {
+    diffViewManager.handleApplyChoice();
+  });
 
   const discardDiffChangesCommand = vscode.commands.registerCommand(
     'rector.discardDiffChanges',
@@ -129,7 +115,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Auto-fix on save
   const onSaveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
     const config = vscode.workspace.getConfiguration('rector');
     const enabled = config.get<boolean>('enabled', true);
@@ -142,10 +127,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (autofix) {
       if (showDiff) {
-        // Show diff before applying
         vscode.commands.executeCommand('rector.processFileWithDiff');
       } else {
-        // Apply directly
         const result = await rectorRunner.processFile(document.uri.fsPath, false);
         if (result.success && result.changedFiles > 0) {
           const doc = await vscode.workspace.openTextDocument(document.uri);
