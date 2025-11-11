@@ -2,8 +2,12 @@
     "name": "rector-vscode",
     "displayName": "Rector",
     "description": "Rector - Instant Upgrades and Automated Refactoring",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "publisher": "vix",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/vix-4800/rector-vsc"
+    },
     "engines": {
         "vscode": "^1.105.0"
     },
