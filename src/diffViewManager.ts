@@ -7,6 +7,7 @@ export class DiffViewManager {
   private applyStatusBarItem: vscode.StatusBarItem | null = null;
   private discardStatusBarItem: vscode.StatusBarItem | null = null;
   private pendingChoice: ((value: 'Apply' | 'Discard' | undefined) => void) | null = null;
+  private pendingApplyCallback: (() => Promise<void>) | null = null;
 
   async showDiff(
     originalUri: vscode.Uri,
@@ -38,19 +39,33 @@ export class DiffViewManager {
         preview: false,
       });
 
-      // Show status bar buttons and wait for user choice
-      const choice = await this.showStatusBarChoice();
+      // Save callback for status bar buttons
+      this.pendingApplyCallback = applyCallback;
+
+      // Show quick pick dialog (with timeout) AND status bar buttons
+      const choice = await Promise.race([
+        this.showDialogChoice(),
+        this.showStatusBarChoice(),
+      ]);
 
       if (choice === 'Apply') {
         await applyCallback();
         vscode.window.showInformationMessage('Rector changes applied');
+        this.pendingApplyCallback = null;
+        this.hideStatusBarChoice();
       } else if (choice === 'Discard') {
         vscode.window.showInformationMessage('Rector changes discarded');
+        this.pendingApplyCallback = null;
+        this.hideStatusBarChoice();
+      } else {
+        // Dialog was closed/timed out - show hint about status bar
+        // Status bar buttons remain visible for later use
+        vscode.window.showInformationMessage(
+          'Rector diff is open. Use the buttons in the status bar to Apply or Discard changes.',
+          'Got it'
+        );
       }
     } finally {
-      // Clean up status bar items
-      this.hideStatusBarChoice();
-
       // Clean up temp file
       try {
         await fs.promises.unlink(tmpFilePath);
@@ -58,6 +73,15 @@ export class DiffViewManager {
         // Ignore cleanup errors
       }
     }
+  }
+
+  private async showDialogChoice(): Promise<'Apply' | 'Discard' | undefined> {
+    return await vscode.window.showInformationMessage(
+      'Apply Rector changes?',
+      { modal: false },
+      'Apply',
+      'Discard'
+    );
   }
 
   private showStatusBarChoice(): Promise<'Apply' | 'Discard' | undefined> {
@@ -106,6 +130,13 @@ export class DiffViewManager {
       this.pendingChoice('Apply');
       this.pendingChoice = null;
     }
+    if (this.pendingApplyCallback) {
+      this.pendingApplyCallback().then(() => {
+        vscode.window.showInformationMessage('Rector changes applied');
+        this.pendingApplyCallback = null;
+        this.hideStatusBarChoice();
+      });
+    }
   }
 
   handleDiscardChoice(): void {
@@ -113,10 +144,16 @@ export class DiffViewManager {
       this.pendingChoice('Discard');
       this.pendingChoice = null;
     }
+    if (this.pendingApplyCallback) {
+      vscode.window.showInformationMessage('Rector changes discarded');
+      this.pendingApplyCallback = null;
+      this.hideStatusBarChoice();
+    }
   }
 
   dispose(): void {
     this.hideStatusBarChoice();
+    this.pendingApplyCallback = null;
   }
 
     private applyDiff(originalContent: string, diff: string): string | null {

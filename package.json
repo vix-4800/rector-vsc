@@ -41,11 +41,13 @@
             },
             {
                 "command": "rector.applyDiffChanges",
-                "title": "Rector: Apply Diff Changes"
+                "title": "Rector: Apply Diff Changes",
+                "icon": "$(check)"
             },
             {
                 "command": "rector.discardDiffChanges",
-                "title": "Rector: Discard Diff Changes"
+                "title": "Rector: Discard Diff Changes",
+                "icon": "$(close)"
             }
         ],
         "configuration": {
@@ -93,6 +95,26 @@
                 {
                     "command": "rector.processFileWithDiff",
                     "when": "editorLangId == php"
+                },
+                {
+                    "command": "rector.applyDiffChanges",
+                    "when": "false"
+                },
+                {
+                    "command": "rector.discardDiffChanges",
+                    "when": "false"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "rector.applyDiffChanges",
+                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "rector.discardDiffChanges",
+                    "when": "resourceFilename =~ /\\.rector\\.tmp\\.php$/",
+                    "group": "navigation@2"
                 }
             ],
             "editor/context": [
