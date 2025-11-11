@@ -104,4 +104,4 @@ Add to `.vscode/settings.json`:
 
 ## License
 
-MIT
+[MIT License](LICENSE)
