@@ -2,7 +2,7 @@
     "name": "rector-vscode",
     "displayName": "Rector",
     "description": "Rector - Instant Upgrades and Automated Refactoring",
-    "version": "0.2.0",
+    "version": "0.3.1",
     "publisher": "vix",
     "repository": {
         "type": "git",
