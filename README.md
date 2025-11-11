@@ -10,6 +10,7 @@ code.
 - Optional auto-fix on file save
 - Automatic Rector config file detection
 - Clear Rector cache
+- Output channel with detailed logging of Rector commands and results
 
 ## Requirements
 
@@ -37,6 +38,7 @@ composer require --dev rector/rector
 - **Rector: Process Current File** - Apply Rector to the current file
 - **Rector: Process Current File (Show Diff)** - Preview changes before applying
 - **Rector: Clear Cache** - Clear Rector cache
+- **Rector: Show Output** - Open the PHP Rector output channel
 
 Commands are available via:
 
