@@ -168,10 +168,13 @@ export class RectorRunner {
         result.diff = fileDiff.diff;
         result.appliedRectors = fileDiff.appliedRectors;
 
-        this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
         if (result.appliedRectors && result.appliedRectors.length > 0) {
           this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
         }
+      }
+
+      if (output.totals.changedFiles > 0) {
+        this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
       } else {
         this.log('SUCCESS: No changes needed');
       }
@@ -214,10 +217,13 @@ export class RectorRunner {
               result.diff = fileDiff.diff;
               result.appliedRectors = fileDiff.appliedRectors;
 
-              this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
               if (result.appliedRectors && result.appliedRectors.length > 0) {
                 this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
               }
+            }
+
+            if (output.totals.changedFiles > 0) {
+              this.log(`SUCCESS: ${output.totals.changedFiles} file(s) changed`);
             } else {
               this.log('SUCCESS: No changes needed');
             }
