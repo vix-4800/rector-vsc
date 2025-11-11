@@ -38,6 +38,14 @@
             {
                 "command": "rector.showOutput",
                 "title": "Rector: Show Output"
+            },
+            {
+                "command": "rector.applyDiffChanges",
+                "title": "Rector: Apply Diff Changes"
+            },
+            {
+                "command": "rector.discardDiffChanges",
+                "title": "Rector: Discard Diff Changes"
             }
         ],
         "configuration": {

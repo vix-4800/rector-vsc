@@ -125,6 +125,21 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel.show();
   });
 
+  // Register commands for status bar buttons
+  const applyDiffChangesCommand = vscode.commands.registerCommand(
+    'rector.applyDiffChanges',
+    () => {
+      diffViewManager.handleApplyChoice();
+    }
+  );
+
+  const discardDiffChangesCommand = vscode.commands.registerCommand(
+    'rector.discardDiffChanges',
+    () => {
+      diffViewManager.handleDiscardChoice();
+    }
+  );
+
   // Auto-fix on save
   const onSaveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
     const config = vscode.workspace.getConfiguration('rector');
@@ -153,10 +168,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     outputChannel,
+    diffViewManager,
     processFileCommand,
     processFileWithDiffCommand,
     clearCacheCommand,
     showOutputCommand,
+    applyDiffChangesCommand,
+    discardDiffChangesCommand,
     onSaveListener
   );
 }

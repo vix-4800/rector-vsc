@@ -1,8 +1,13 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
 export class DiffViewManager {
+  private applyStatusBarItem: vscode.StatusBarItem | null = null;
+  private discardStatusBarItem: vscode.StatusBarItem | null = null;
+  private pendingChoice: ((value: 'Apply' | 'Discard' | undefined) => void) | null = null;
+
   async showDiff(
     originalUri: vscode.Uri,
     diff: string,
@@ -33,18 +38,19 @@ export class DiffViewManager {
         preview: false,
       });
 
-      // Show quick pick to apply or discard
-      const choice = await vscode.window.showInformationMessage(
-        'Apply Rector changes?',
-        { modal: false },
-        'Apply',
-        'Discard'
-      );
+      // Show status bar buttons and wait for user choice
+      const choice = await this.showStatusBarChoice();
 
       if (choice === 'Apply') {
         await applyCallback();
+        vscode.window.showInformationMessage('Rector changes applied');
+      } else if (choice === 'Discard') {
+        vscode.window.showInformationMessage('Rector changes discarded');
       }
     } finally {
+      // Clean up status bar items
+      this.hideStatusBarChoice();
+
       // Clean up temp file
       try {
         await fs.promises.unlink(tmpFilePath);
@@ -52,6 +58,65 @@ export class DiffViewManager {
         // Ignore cleanup errors
       }
     }
+  }
+
+  private showStatusBarChoice(): Promise<'Apply' | 'Discard' | undefined> {
+    return new Promise((resolve) => {
+      this.pendingChoice = resolve;
+
+      // Create Apply button
+      this.applyStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        1000
+      );
+      this.applyStatusBarItem.text = '$(check) Apply Rector Changes';
+      this.applyStatusBarItem.backgroundColor = new vscode.ThemeColor(
+        'statusBarItem.warningBackground'
+      );
+      this.applyStatusBarItem.command = 'rector.applyDiffChanges';
+      this.applyStatusBarItem.tooltip = 'Apply the Rector changes shown in diff';
+      this.applyStatusBarItem.show();
+
+      // Create Discard button
+      this.discardStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        999
+      );
+      this.discardStatusBarItem.text = '$(x) Discard';
+      this.discardStatusBarItem.command = 'rector.discardDiffChanges';
+      this.discardStatusBarItem.tooltip = 'Discard the Rector changes';
+      this.discardStatusBarItem.show();
+    });
+  }
+
+  private hideStatusBarChoice(): void {
+    if (this.applyStatusBarItem) {
+      this.applyStatusBarItem.dispose();
+      this.applyStatusBarItem = null;
+    }
+    if (this.discardStatusBarItem) {
+      this.discardStatusBarItem.dispose();
+      this.discardStatusBarItem = null;
+    }
+    this.pendingChoice = null;
+  }
+
+  handleApplyChoice(): void {
+    if (this.pendingChoice) {
+      this.pendingChoice('Apply');
+      this.pendingChoice = null;
+    }
+  }
+
+  handleDiscardChoice(): void {
+    if (this.pendingChoice) {
+      this.pendingChoice('Discard');
+      this.pendingChoice = null;
+    }
+  }
+
+  dispose(): void {
+    this.hideStatusBarChoice();
   }
 
     private applyDiff(originalContent: string, diff: string): string | null {
@@ -64,7 +129,6 @@ export class DiffViewManager {
 
             let originalIndex = 0;
             let inHeader = true;
-            let skipOriginalLines = 0;
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
@@ -131,7 +195,7 @@ export class DiffViewManager {
     if (workspaceFolder) {
       tmpDir = path.join(workspaceFolder.uri.fsPath, '.rector-tmp');
     } else {
-      tmpDir = path.join(require('os').tmpdir(), 'rector-vscode');
+      tmpDir = path.join(os.tmpdir(), 'rector-vscode');
     }
 
     // Create directory if it doesn't exist
