@@ -242,6 +242,151 @@ export class RectorRunner {
     }
   }
 
+  async processPaths(paths: string[]): Promise<RectorResult> {
+    const config = this.getConfig();
+    const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
+    const args: string[] = ['process', ...paths];
+
+    args.push('--output-format=json');
+    args.push('--no-progress-bar');
+
+    if (config.clearCache) {
+      args.push('--clear-cache');
+    }
+
+    // Find config file from the first path
+    let configPath = config.configPath;
+    if (!configPath && paths.length > 0) {
+      const foundConfig = this.findConfigFile(paths[0]);
+      if (foundConfig) {
+        configPath = foundConfig;
+        this.log(`Auto-detected config file: ${configPath}`);
+      }
+    } else if (configPath) {
+      if (configPath.startsWith('./') || configPath.startsWith('../')) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          configPath = path.resolve(workspaceFolders[0].uri.fsPath, configPath);
+        }
+      }
+
+      if (!fs.existsSync(configPath)) {
+        const error = `Config file not found: ${configPath}`;
+        this.log(`ERROR: ${error}`);
+        return {
+          success: false,
+          changedFiles: 0,
+          error,
+        };
+      }
+    }
+
+    if (configPath) {
+      args.push('--config=' + configPath);
+    }
+
+    // Get working directory - use workspace root or first path's directory
+    let cwd: string;
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      cwd = workspaceFolders[0].uri.fsPath;
+    } else if (paths.length > 0) {
+      const firstPath = paths[0];
+      cwd = fs.statSync(firstPath).isDirectory() ? firstPath : path.dirname(firstPath);
+    } else {
+      cwd = process.cwd();
+    }
+
+    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+    this.log(`Executing: ${commandStr}`);
+    this.log(`Working directory: ${cwd}`);
+    this.log(`Processing paths: ${paths.join(', ')}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      this.log(`WARNING: Process timed out after ${config.timeout}ms`);
+    }, config.timeout);
+
+    try {
+      const { stdout } = await execFile(resolvedExecutable, args, {
+        cwd,
+        maxBuffer: 10 * 1024 * 1024,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const output = this.parseJsonOutput(stdout);
+
+      if (!output) {
+        this.log('ERROR: Failed to parse Rector output');
+        return {
+          success: false,
+          changedFiles: 0,
+          error: 'Failed to parse Rector output',
+        };
+      }
+
+      const result: RectorResult = {
+        success: true,
+        changedFiles: output.totals.changed_files,
+      };
+
+      this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+
+      return result;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+
+      if (error.name === 'AbortError') {
+        const errorMsg = `Rector process timed out after ${config.timeout}ms`;
+        this.log(`ERROR: ${errorMsg}`);
+        return {
+          success: false,
+          changedFiles: 0,
+          error: errorMsg,
+        };
+      }
+
+      if (error.code === 'ENOENT') {
+        const errorMsg = `Rector executable not found: ${config.executablePath}`;
+        this.log(`ERROR: ${errorMsg}`);
+        return {
+          success: false,
+          changedFiles: 0,
+          error: errorMsg,
+        };
+      }
+
+      if (error.stdout) {
+        try {
+          const output = this.parseJsonOutput(error.stdout);
+          if (output) {
+            const result: RectorResult = {
+              success: true,
+              changedFiles: output.totals.changed_files,
+            };
+
+            this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+
+            return result;
+          }
+        } catch (parseError) {
+          // Continue to error handling
+        }
+      }
+
+      const errorMsg = error.message || error.stderr || 'Unknown error';
+      this.log(`ERROR: ${errorMsg}`);
+      return {
+        success: false,
+        changedFiles: 0,
+        error: errorMsg,
+      };
+    }
+  }
+
   private parseJsonOutput(stdout: string): RectorJsonOutput | null {
     try {
       const jsonMatch = stdout.match(/\{[\s\S]*\}/);

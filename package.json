@@ -37,6 +37,10 @@
                 "title": "Rector: Process Current File (Show Diff)"
             },
             {
+                "command": "rector.processFiles",
+                "title": "Rector: Refactor Selected Files/Folders"
+            },
+            {
                 "command": "rector.clearCache",
                 "title": "Rector: Clear Cache"
             },
@@ -142,6 +146,13 @@
                     "command": "rector.processFileWithDiff",
                     "when": "editorLangId == php",
                     "group": "1_modification"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "rector.processFiles",
+                    "when": "explorerResourceIsFolder || resourceExtname == .php",
+                    "group": "2_workspace"
                 }
             ]
         }

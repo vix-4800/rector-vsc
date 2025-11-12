@@ -6,6 +6,7 @@ code.
 ## Features
 
 - Apply Rector refactoring rules to current file
+- **Refactor multiple files and folders** via Explorer context menu
 - Preview changes before applying with diff view
 - Optional auto-fix on file save
 - **CodeLens buttons** for quick access to Rector commands directly in PHP files
@@ -38,6 +39,7 @@ composer require --dev rector/rector
 
 - **Rector: Process Current File** - Apply Rector to the current file
 - **Rector: Process Current File (Show Diff)** - Preview changes before applying
+- **Rector: Refactor Selected Files/Folders** - Apply Rector to selected files or folders in Explorer
 - **Rector: Clear Cache** - Clear Rector cache
 - **Rector: Show Output** - Open the PHP Rector output channel
 
@@ -45,6 +47,7 @@ Commands are available via:
 
 - Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 - Editor context menu (right click)
+- **Explorer context menu** (right click on files or folders)
 
 ## Configuration
 

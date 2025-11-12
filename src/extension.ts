@@ -94,6 +94,49 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const processFilesCommand = vscode.commands.registerCommand(
+    'rector.processFiles',
+    async (...args: any[]) => {
+      // args[0] is the clicked resource
+      // args[1] is the array of selected resources (if multiple selection)
+      const selectedResources: vscode.Uri[] = args[1] || [args[0]];
+
+      if (!selectedResources || selectedResources.length === 0) {
+        vscode.window.showErrorMessage('No files or folders selected');
+        return;
+      }
+
+      const paths = selectedResources.map((uri) => uri.fsPath);
+
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Running Rector on selected items...',
+            cancellable: false,
+          },
+          async () => {
+            const result = await rectorRunner.processPaths(paths);
+
+            if (result.success) {
+              if (result.changedFiles > 0) {
+                vscode.window.showInformationMessage(
+                  `Rector: ${result.changedFiles} file(s) changed`
+                );
+              } else {
+                vscode.window.showInformationMessage('Rector: No changes needed');
+              }
+            } else {
+              vscode.window.showErrorMessage(`Rector failed: ${result.error}`);
+            }
+          }
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage(`Rector error: ${error}`);
+      }
+    }
+  );
+
   const clearCacheCommand = vscode.commands.registerCommand('rector.clearCache', async () => {
     try {
       await rectorRunner.clearCache();
@@ -152,6 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
     diffViewManager,
     processFileCommand,
     processFileWithDiffCommand,
+    processFilesCommand,
     clearCacheCommand,
     showOutputCommand,
     applyDiffChangesCommand,
