@@ -27,6 +27,7 @@ suite('Extension Test Suite', () => {
     const rectorCommands = [
       'rector.processFile',
       'rector.processFileWithDiff',
+      'rector.processFiles',
       'rector.clearCache',
       'rector.showOutput',
       'rector.applyDiffChanges',
