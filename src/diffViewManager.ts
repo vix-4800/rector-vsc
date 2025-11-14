@@ -15,6 +15,7 @@ export class DiffViewManager {
   private changeActiveEditorListener: vscode.Disposable | null = null;
   private isApplying = false;
   private cleanupTimeout: NodeJS.Timeout | null = null;
+  private autoDiscarded = false;
 
   async showDiff(
     originalUri: vscode.Uri,
@@ -23,6 +24,9 @@ export class DiffViewManager {
   ): Promise<void> {
     // Clean up any existing diff before creating a new one
     await this.cleanupDiffState();
+
+    // Reset auto-discard flag for new diff
+    this.autoDiscarded = false;
 
     const originalContent = await fs.promises.readFile(originalUri.fsPath, 'utf8');
     const modifiedContent = this.applyDiff(originalContent, diff);
@@ -68,7 +72,10 @@ export class DiffViewManager {
         }
         await this.cleanupDiffState();
       } else if (choice === 'Discard') {
-        vscode.window.showInformationMessage('Rector changes discarded');
+        // Only show message if not auto-discarded (manual discard via button)
+        if (!this.autoDiscarded) {
+          vscode.window.showInformationMessage('Rector changes discarded');
+        }
         await this.cleanupDiffState();
       }
     } catch (error) {
@@ -135,6 +142,7 @@ export class DiffViewManager {
 
   private triggerDiscard(): void {
     if (this.pendingChoice) {
+      this.autoDiscarded = true;
       vscode.window.showInformationMessage('Rector changes discarded (diff closed)');
       this.pendingChoice('Discard');
       this.pendingChoice = null;
@@ -150,6 +158,7 @@ export class DiffViewManager {
 
     this.pendingApplyCallback = null;
     this.isApplying = false;
+    this.autoDiscarded = false;
 
     // Delete temporary file
     if (this.currentTmpFilePath) {
