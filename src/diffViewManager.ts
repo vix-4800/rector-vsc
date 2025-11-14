@@ -22,10 +22,7 @@ export class DiffViewManager {
     diff: string,
     applyCallback: () => Promise<void>
   ): Promise<void> {
-    // Clean up any existing diff before creating a new one
     await this.cleanupDiffState();
-
-    // Reset auto-discard flag for new diff
     this.autoDiscarded = false;
 
     const originalContent = await fs.promises.readFile(originalUri.fsPath, 'utf8');
@@ -72,7 +69,6 @@ export class DiffViewManager {
         }
         await this.cleanupDiffState();
       } else if (choice === 'Discard') {
-        // Only show message if not auto-discarded (manual discard via button)
         if (!this.autoDiscarded) {
           vscode.window.showInformationMessage('Rector changes discarded');
         }
@@ -85,15 +81,12 @@ export class DiffViewManager {
       if (this.currentTmpFilePath) {
         try {
           await fs.promises.unlink(this.currentTmpFilePath);
-        } catch {
-          // Ignore cleanup errors
-        }
+        } catch {}
       }
     }
   }
 
   private setupListeners(): void {
-    // Clean up existing listeners
     if (this.closeDocumentListener) {
       this.closeDocumentListener.dispose();
       this.closeDocumentListener = null;
@@ -103,16 +96,13 @@ export class DiffViewManager {
       this.changeActiveEditorListener = null;
     }
 
-    // Listen for document close events
     this.closeDocumentListener = vscode.workspace.onDidCloseTextDocument((document) => {
       const docUri = document.uri.toString();
-      // Check if either the original or temp file is closed
       if (
         (this.currentTmpUri && docUri === this.currentTmpUri.toString()) ||
         (this.currentOriginalUri && docUri === this.currentOriginalUri.toString())
       ) {
         if (this.pendingChoice) {
-          // Use a timeout to detect if the diff view is actually closed
           this.cleanupTimeout = setTimeout(() => {
             this.triggerDiscard();
           }, 100);
@@ -120,10 +110,8 @@ export class DiffViewManager {
       }
     });
 
-    // Listen for active editor changes to detect diff view closure
     this.changeActiveEditorListener = vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (this.currentTmpUri && this.currentOriginalUri) {
-        // Check if the diff view is still open
         const isDiffOpen = vscode.window.visibleTextEditors.some(
           (e) =>
             e.document.uri.toString() === this.currentTmpUri?.toString() ||
@@ -131,7 +119,6 @@ export class DiffViewManager {
         );
 
         if (!isDiffOpen && this.pendingChoice) {
-          // Diff view is closed, trigger discard
           this.cleanupTimeout = setTimeout(() => {
             this.triggerDiscard();
           }, 100);
@@ -150,7 +137,6 @@ export class DiffViewManager {
   }
 
   async cleanupDiffState(): Promise<void> {
-    // Clear timeout if exists
     if (this.cleanupTimeout) {
       clearTimeout(this.cleanupTimeout);
       this.cleanupTimeout = null;
@@ -160,15 +146,12 @@ export class DiffViewManager {
     this.isApplying = false;
     this.autoDiscarded = false;
 
-    // Delete temporary file
     if (this.currentTmpFilePath) {
       try {
         if (fs.existsSync(this.currentTmpFilePath)) {
           await fs.promises.unlink(this.currentTmpFilePath);
         }
-      } catch {
-        // Ignore cleanup errors
-      }
+      } catch {}
       this.currentTmpFilePath = null;
     }
 
@@ -176,7 +159,6 @@ export class DiffViewManager {
     this.currentOriginalUri = null;
     this.hideStatusBarChoice();
 
-    // Dispose listeners
     if (this.closeDocumentListener) {
       this.closeDocumentListener.dispose();
       this.closeDocumentListener = null;
@@ -246,7 +228,6 @@ export class DiffViewManager {
 
   async dispose(): Promise<void> {
     await this.cleanupDiffState();
-    // Clean up the entire temp directory
     await this.cleanupTempDir();
   }
 
@@ -255,21 +236,16 @@ export class DiffViewManager {
       const tmpDir = await this.getTempDir();
       if (fs.existsSync(tmpDir)) {
         const files = await fs.promises.readdir(tmpDir);
-        // Delete all .rector.tmp.php files
         for (const file of files) {
           if (file.includes('.rector.tmp.php')) {
             const filePath = path.join(tmpDir, file);
             try {
               await fs.promises.unlink(filePath);
-            } catch {
-              // Ignore errors
-            }
+            } catch {}
           }
         }
       }
-    } catch {
-      // Ignore cleanup errors
-    }
+    } catch {}
   }
 
   private applyDiff(originalContent: string, diff: string): string | null {
@@ -343,9 +319,7 @@ export class DiffViewManager {
 
     try {
       await fs.promises.mkdir(tmpDir, { recursive: true });
-    } catch {
-      // Directory might already exist
-    }
+    } catch {}
 
     return tmpDir;
   }

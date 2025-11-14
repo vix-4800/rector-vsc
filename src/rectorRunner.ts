@@ -60,7 +60,6 @@ export class RectorRunner {
   }
 
   private resolveExecutablePath(executablePath: string): string {
-    // Use resolveSpecialPath for consistent path handling
     return this.resolveSpecialPath(executablePath);
   }
 
@@ -71,12 +70,10 @@ export class RectorRunner {
 
     let resolvedPath = inputPath;
 
-    // Handle tilde (~) for home directory
     if (resolvedPath.startsWith('~/') || resolvedPath === '~') {
       resolvedPath = resolvedPath.replace(/^~/, os.homedir());
     }
 
-    // Handle relative paths (./ and ../)
     if (resolvedPath.startsWith('./') || resolvedPath.startsWith('../')) {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
@@ -84,7 +81,6 @@ export class RectorRunner {
       }
     }
 
-    // Normalize the path to handle any redundant separators or segments
     resolvedPath = path.normalize(resolvedPath);
 
     return resolvedPath;
@@ -131,7 +127,6 @@ export class RectorRunner {
         this.log(`Auto-detected config file: ${configPath}`);
       }
     } else {
-      // Resolve special paths (like ~, ./, ../)
       configPath = this.resolveSpecialPath(configPath);
 
       if (!fs.existsSync(configPath)) {
@@ -245,9 +240,7 @@ export class RectorRunner {
 
             return result;
           }
-        } catch (parseError) {
-          // Continue to error handling
-        }
+        } catch (parseError) {}
       }
 
       const errorMsg = error.message || error.stderr || 'Unknown error';
@@ -272,7 +265,6 @@ export class RectorRunner {
       args.push('--clear-cache');
     }
 
-    // Find config file from the first path
     let configPath = config.configPath;
     if (!configPath && paths.length > 0) {
       const foundConfig = this.findConfigFile(paths[0]);
@@ -281,7 +273,6 @@ export class RectorRunner {
         this.log(`Auto-detected config file: ${configPath}`);
       }
     } else if (configPath) {
-      // Resolve special paths (like ~, ./, ../)
       configPath = this.resolveSpecialPath(configPath);
 
       if (!fs.existsSync(configPath)) {
@@ -299,7 +290,6 @@ export class RectorRunner {
       args.push('--config=' + configPath);
     }
 
-    // Get working directory - use workspace root or first path's directory
     let cwd: string;
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
@@ -386,9 +376,7 @@ export class RectorRunner {
 
             return result;
           }
-        } catch (parseError) {
-          // Continue to error handling
-        }
+        } catch (parseError) {}
       }
 
       const errorMsg = error.message || error.stderr || 'Unknown error';

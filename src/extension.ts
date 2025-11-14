@@ -11,10 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
   const rectorRunner = new RectorRunner(outputChannel);
   const diffViewManager = new DiffViewManager();
 
-  // Clean up any leftover temporary files from previous sessions
-  diffViewManager.dispose().catch(() => {
-    // Ignore cleanup errors on startup
-  });
+  diffViewManager.dispose().catch(() => {});
   const processFileCommand = vscode.commands.registerCommand('rector.processFile', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -102,8 +99,6 @@ export function activate(context: vscode.ExtensionContext) {
   const processFilesCommand = vscode.commands.registerCommand(
     'rector.processFiles',
     async (...args: any[]) => {
-      // args[0] is the clicked resource
-      // args[1] is the array of selected resources (if multiple selection)
       const selectedResources: vscode.Uri[] = args[1] || [args[0]];
 
       if (!selectedResources || selectedResources.length === 0) {

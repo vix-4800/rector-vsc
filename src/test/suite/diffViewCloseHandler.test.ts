@@ -22,7 +22,6 @@ suite('DiffViewManager Close Handler Tests', () => {
   });
 
   test('DiffViewManager should cleanup on dispose', () => {
-    // Create a new instance
     const manager = new DiffViewManager();
 
     // Should not throw on dispose
