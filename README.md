@@ -64,7 +64,8 @@ Commands are available via:
 - Description: Path to Rector executable
 - Examples:
   - `"rector"` - global installation
-  - `"./vendor/bin/rector"` - project installation
+  - `"./vendor/bin/rector"` - project installation (relative to workspace)
+  - `"~/bin/rector"` - home directory expansion
   - `"/home/user/.config/composer/vendor/bin/rector"` - absolute path
 
 ### `rector.configPath`
@@ -72,6 +73,11 @@ Commands are available via:
 - Type: `string`
 - Default: `""`
 - Description: Path to Rector configuration file
+- Example:
+  - `""` - empty (auto-detection)
+  - `"./rector.php"` - relative to workspace
+  - `"~/config/rector.php"` - home directory expansion
+  - `"/absolute/path/to/rector.php"` - absolute path
 - Note: If not specified, the extension searches for `rector.php` or `rector.php.dist` in parent directories
 
 ### `rector.enableAutofix`

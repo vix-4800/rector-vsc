@@ -1,5 +1,6 @@
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
@@ -59,13 +60,34 @@ export class RectorRunner {
   }
 
   private resolveExecutablePath(executablePath: string): string {
-    if (executablePath.startsWith('./') || executablePath.startsWith('../')) {
+    // Use resolveSpecialPath for consistent path handling
+    return this.resolveSpecialPath(executablePath);
+  }
+
+  private resolveSpecialPath(inputPath: string): string {
+    if (!inputPath) {
+      return inputPath;
+    }
+
+    let resolvedPath = inputPath;
+
+    // Handle tilde (~) for home directory
+    if (resolvedPath.startsWith('~/') || resolvedPath === '~') {
+      resolvedPath = resolvedPath.replace(/^~/, os.homedir());
+    }
+
+    // Handle relative paths (./ and ../)
+    if (resolvedPath.startsWith('./') || resolvedPath.startsWith('../')) {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
-        return path.resolve(workspaceFolders[0].uri.fsPath, executablePath);
+        resolvedPath = path.resolve(workspaceFolders[0].uri.fsPath, resolvedPath);
       }
     }
-    return executablePath;
+
+    // Normalize the path to handle any redundant separators or segments
+    resolvedPath = path.normalize(resolvedPath);
+
+    return resolvedPath;
   }
 
   private findConfigFile(filePath: string): string | null {
@@ -109,12 +131,8 @@ export class RectorRunner {
         this.log(`Auto-detected config file: ${configPath}`);
       }
     } else {
-      if (configPath.startsWith('./') || configPath.startsWith('../')) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
-          configPath = path.resolve(workspaceFolders[0].uri.fsPath, configPath);
-        }
-      }
+      // Resolve special paths (like ~, ./, ../)
+      configPath = this.resolveSpecialPath(configPath);
 
       if (!fs.existsSync(configPath)) {
         const error = `Config file not found: ${configPath}`;
@@ -263,12 +281,8 @@ export class RectorRunner {
         this.log(`Auto-detected config file: ${configPath}`);
       }
     } else if (configPath) {
-      if (configPath.startsWith('./') || configPath.startsWith('../')) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
-          configPath = path.resolve(workspaceFolders[0].uri.fsPath, configPath);
-        }
-      }
+      // Resolve special paths (like ~, ./, ../)
+      configPath = this.resolveSpecialPath(configPath);
 
       if (!fs.existsSync(configPath)) {
         const error = `Config file not found: ${configPath}`;
