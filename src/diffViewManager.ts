@@ -86,9 +86,10 @@ export class DiffViewManager {
 
     this.closeDocumentListener = vscode.workspace.onDidCloseTextDocument((document) => {
       if (this.currentTmpUri && document.uri.toString() === this.currentTmpUri.toString()) {
-        if (this.pendingApplyCallback) {
+        if (this.pendingChoice) {
           vscode.window.showInformationMessage('Rector changes discarded (diff closed)');
-          this.cleanupDiffState();
+          this.pendingChoice('Discard');
+          this.pendingChoice = null;
         }
       }
     });
