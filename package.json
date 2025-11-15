@@ -9,6 +9,11 @@
         "type": "git",
         "url": "https://github.com/vix-4800/rector-vsc"
     },
+    "author": {
+        "name": "Anton VIX",
+        "email": "Gordan.ei@protonmail.ch",
+        "url": "https://github.com/vix-4800"
+    },
     "engines": {
         "vscode": "^1.105.0"
     },
