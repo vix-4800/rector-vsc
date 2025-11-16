@@ -3,7 +3,6 @@ out/test/**
 *.vsix
 .vscode-test/
 *.log
-.rector-tmp/
 test.php
 src/**
 .github/**

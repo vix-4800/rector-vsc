@@ -308,14 +308,7 @@ export class DiffViewManager {
   }
 
   private async getTempDir(): Promise<string> {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    let tmpDir: string;
-
-    if (workspaceFolder) {
-      tmpDir = path.join(workspaceFolder.uri.fsPath, '.rector-tmp');
-    } else {
-      tmpDir = path.join(os.tmpdir(), 'rector-vscode');
-    }
+    const tmpDir = path.join(os.tmpdir(), 'rector-vscode');
 
     try {
       await fs.promises.mkdir(tmpDir, { recursive: true });
