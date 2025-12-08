@@ -31,394 +31,414 @@ interface RectorJsonOutput {
 }
 
 export class RectorRunner {
-  private outputChannel: vscode.OutputChannel | null = null;
+    private outputChannel: vscode.OutputChannel | null = null;
 
-  constructor(outputChannel?: vscode.OutputChannel) {
-    this.outputChannel = outputChannel || null;
-  }
-
-  private log(message: string): void {
-    if (this.outputChannel) {
-      const timestamp = new Date().toLocaleTimeString();
-      this.outputChannel.appendLine(`[${timestamp}] ${message}`);
-    }
-  }
-
-  private getConfig(): {
-    executablePath: string;
-    configPath: string;
-    clearCache: boolean;
-    timeout: number;
-  } {
-    const config = vscode.workspace.getConfiguration('rector');
-    return {
-      executablePath: config.get<string>('executablePath', 'rector'),
-      configPath: config.get<string>('configPath', ''),
-      clearCache: config.get<boolean>('clearCacheBeforeRun', false),
-      timeout: config.get<number>('timeout', 60000),
-    };
-  }
-
-  private resolveExecutablePath(executablePath: string): string {
-    return this.resolveSpecialPath(executablePath);
-  }
-
-  private resolveSpecialPath(inputPath: string): string {
-    if (!inputPath) {
-      return inputPath;
+    constructor(outputChannel?: vscode.OutputChannel) {
+        this.outputChannel = outputChannel || null;
     }
 
-    let resolvedPath = inputPath;
-
-    if (resolvedPath.startsWith('~/') || resolvedPath === '~') {
-      resolvedPath = resolvedPath.replace(/^~/, os.homedir());
-    }
-
-    if (resolvedPath.startsWith('./') || resolvedPath.startsWith('../')) {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (workspaceFolders && workspaceFolders.length > 0) {
-        resolvedPath = path.resolve(workspaceFolders[0].uri.fsPath, resolvedPath);
-      }
-    }
-
-    resolvedPath = path.normalize(resolvedPath);
-
-    return resolvedPath;
-  }
-
-  private findConfigFile(filePath: string): string | null {
-    let dir = path.dirname(filePath);
-    const configNames = ['rector.php', 'rector.php.dist'];
-
-    while (dir !== path.dirname(dir)) {
-      for (const configName of configNames) {
-        const configPath = path.join(dir, configName);
-        if (fs.existsSync(configPath)) {
-          return configPath;
+    private log(message: string): void {
+        if (this.outputChannel) {
+            const timestamp = new Date().toLocaleTimeString();
+            this.outputChannel.appendLine(`[${timestamp}] ${message}`);
         }
-      }
-      dir = path.dirname(dir);
     }
 
-    return null;
-  }
-
-  async processFile(filePath: string, dryRun: boolean): Promise<RectorResult> {
-    const config = this.getConfig();
-    const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
-    const args: string[] = ['process', filePath];
-
-    if (dryRun) {
-      args.push('--dry-run');
-    }
-
-    args.push('--output-format=json');
-    args.push('--no-progress-bar');
-
-    if (config.clearCache) {
-      args.push('--clear-cache');
-    }
-
-    let configPath = config.configPath;
-    if (!configPath) {
-      const foundConfig = this.findConfigFile(filePath);
-      if (foundConfig) {
-        configPath = foundConfig;
-        this.log(`Auto-detected config file: ${configPath}`);
-      }
-    } else {
-      configPath = this.resolveSpecialPath(configPath);
-
-      if (!fs.existsSync(configPath)) {
-        const error = `Config file not found: ${configPath}`;
-        this.log(`ERROR: ${error}`);
+    private getConfig(): {
+        executablePath: string;
+        configPath: string;
+        clearCache: boolean;
+        timeout: number;
+    } {
+        const config = vscode.workspace.getConfiguration('rector');
         return {
-          success: false,
-          changedFiles: 0,
-          error,
+            executablePath: config.get<string>('executablePath', 'rector'),
+            configPath: config.get<string>('configPath', ''),
+            clearCache: config.get<boolean>('clearCacheBeforeRun', false),
+            timeout: config.get<number>('timeout', 60000),
         };
-      }
     }
 
-    if (configPath) {
-      args.push('--config=' + configPath);
+    private resolveExecutablePath(executablePath: string): string {
+        return this.resolveSpecialPath(executablePath);
     }
 
-    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
-    this.log(`Executing: ${commandStr}`);
-    this.log(`Working directory: ${path.dirname(filePath)}`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-      this.log(`WARNING: Process timed out after ${config.timeout}ms`);
-    }, config.timeout);
-
-    try {
-      const { stdout } = await execFile(resolvedExecutable, args, {
-        cwd: path.dirname(filePath),
-        maxBuffer: 10 * 1024 * 1024,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      const output = this.parseJsonOutput(stdout);
-
-      if (!output) {
-        this.log('ERROR: Failed to parse Rector output');
-        return {
-          success: false,
-          changedFiles: 0,
-          error: 'Failed to parse Rector output',
-        };
-      }
-
-      const result: RectorResult = {
-        success: true,
-        changedFiles: output.totals.changed_files,
-      };
-
-      if (output.file_diffs && output.file_diffs.length > 0) {
-        const fileDiff = output.file_diffs[0];
-        result.diff = fileDiff.diff;
-        result.appliedRectors = fileDiff.applied_rectors;
-
-        this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
-        if (result.appliedRectors && result.appliedRectors.length > 0) {
-          this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
+    private resolveSpecialPath(inputPath: string): string {
+        if (!inputPath) {
+            return inputPath;
         }
-      } else {
-        this.log('SUCCESS: No changes needed');
-      }
 
-      return result;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
+        let resolvedPath = inputPath;
 
-      if (error.name === 'AbortError') {
-        const errorMsg = `Rector process timed out after ${config.timeout}ms`;
-        this.log(`ERROR: ${errorMsg}`);
-        return {
-          success: false,
-          changedFiles: 0,
-          error: errorMsg,
-        };
-      }
+        if (resolvedPath.startsWith('~/') || resolvedPath === '~') {
+            resolvedPath = resolvedPath.replace(/^~/, os.homedir());
+        }
 
-      if (error.code === 'ENOENT') {
-        const errorMsg = `Rector executable not found: ${config.executablePath}`;
-        this.log(`ERROR: ${errorMsg}`);
-        return {
-          success: false,
-          changedFiles: 0,
-          error: errorMsg,
-        };
-      }
+        if (resolvedPath.startsWith('./') || resolvedPath.startsWith('../')) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                resolvedPath = path.resolve(workspaceFolders[0].uri.fsPath, resolvedPath);
+            }
+        }
 
-      if (error.stdout) {
+        resolvedPath = path.normalize(resolvedPath);
+
+        return resolvedPath;
+    }
+
+    private findProjectRoot(filePath: string): string | null {
+        let dir = path.dirname(filePath);
+        const rootMarkers = ['composer.json', 'vendor'];
+
+        while (dir !== path.dirname(dir)) {
+            for (const marker of rootMarkers) {
+                const markerPath = path.join(dir, marker);
+                if (fs.existsSync(markerPath)) {
+                    return dir;
+                }
+            }
+            dir = path.dirname(dir);
+        }
+
+        return null;
+    }
+
+    private findConfigFile(filePath: string): string | null {
+        let dir = path.dirname(filePath);
+        const configNames = ['rector.php', 'rector.php.dist'];
+
+        while (dir !== path.dirname(dir)) {
+            for (const configName of configNames) {
+                const configPath = path.join(dir, configName);
+                if (fs.existsSync(configPath)) {
+                    return configPath;
+                }
+            }
+            dir = path.dirname(dir);
+        }
+
+        return null;
+    }
+
+    async processFile(filePath: string, dryRun: boolean): Promise<RectorResult> {
+        const config = this.getConfig();
+        const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
+        const args: string[] = ['process', filePath];
+
+        if (dryRun) {
+            args.push('--dry-run');
+        }
+
+        args.push('--output-format=json');
+        args.push('--no-progress-bar');
+
+        if (config.clearCache) {
+            args.push('--clear-cache');
+        }
+
+        let configPath = config.configPath;
+        if (!configPath) {
+            const foundConfig = this.findConfigFile(filePath);
+            if (foundConfig) {
+                configPath = foundConfig;
+                this.log(`Auto-detected config file: ${configPath}`);
+            }
+        } else {
+            configPath = this.resolveSpecialPath(configPath);
+
+            if (!fs.existsSync(configPath)) {
+                const error = `Config file not found: ${configPath}`;
+                this.log(`ERROR: ${error}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error,
+                };
+            }
+        }
+
+        if (configPath) {
+            args.push('--config=' + configPath);
+        }
+
+        const projectRoot = this.findProjectRoot(filePath);
+        const cwd = projectRoot || path.dirname(filePath);
+
+        const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+        this.log(`Executing: ${commandStr}`);
+        this.log(`Working directory: ${cwd}`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            this.log(`WARNING: Process timed out after ${config.timeout}ms`);
+        }, config.timeout);
+
         try {
-          const output = this.parseJsonOutput(error.stdout);
-          if (output) {
+            const { stdout } = await execFile(resolvedExecutable, args, {
+                cwd,
+                maxBuffer: 10 * 1024 * 1024,
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            const output = this.parseJsonOutput(stdout);
+
+            if (!output) {
+                this.log('ERROR: Failed to parse Rector output');
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: 'Failed to parse Rector output',
+                };
+            }
+
             const result: RectorResult = {
-              success: true,
-              changedFiles: output.totals.changed_files,
+                success: true,
+                changedFiles: output.totals.changed_files,
             };
 
             if (output.file_diffs && output.file_diffs.length > 0) {
-              const fileDiff = output.file_diffs[0];
-              result.diff = fileDiff.diff;
-              result.appliedRectors = fileDiff.applied_rectors;
+                const fileDiff = output.file_diffs[0];
+                result.diff = fileDiff.diff;
+                result.appliedRectors = fileDiff.applied_rectors;
 
-              this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
-              if (result.appliedRectors && result.appliedRectors.length > 0) {
-                this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
-              }
+                this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+                if (result.appliedRectors && result.appliedRectors.length > 0) {
+                    this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
+                }
             } else {
-              this.log('SUCCESS: No changes needed');
+                this.log('SUCCESS: No changes needed');
             }
 
             return result;
-          }
-        } catch (parseError) {}
-      }
+        } catch (error: any) {
+            clearTimeout(timeoutId);
 
-      const errorMsg = error.message || error.stderr || 'Unknown error';
-      this.log(`ERROR: ${errorMsg}`);
-      return {
-        success: false,
-        changedFiles: 0,
-        error: errorMsg,
-      };
-    }
-  }
+            if (error.name === 'AbortError') {
+                const errorMsg = `Rector process timed out after ${config.timeout}ms`;
+                this.log(`ERROR: ${errorMsg}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: errorMsg,
+                };
+            }
 
-  async processPaths(paths: string[]): Promise<RectorResult> {
-    const config = this.getConfig();
-    const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
-    const args: string[] = ['process', ...paths];
+            if (error.code === 'ENOENT') {
+                const errorMsg = `Rector executable not found: ${config.executablePath}`;
+                this.log(`ERROR: ${errorMsg}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: errorMsg,
+                };
+            }
 
-    args.push('--output-format=json');
-    args.push('--no-progress-bar');
+            if (error.stdout) {
+                try {
+                    const output = this.parseJsonOutput(error.stdout);
+                    if (output) {
+                        const result: RectorResult = {
+                            success: true,
+                            changedFiles: output.totals.changed_files,
+                        };
 
-    if (config.clearCache) {
-      args.push('--clear-cache');
-    }
+                        if (output.file_diffs && output.file_diffs.length > 0) {
+                            const fileDiff = output.file_diffs[0];
+                            result.diff = fileDiff.diff;
+                            result.appliedRectors = fileDiff.applied_rectors;
 
-    let configPath = config.configPath;
-    if (!configPath && paths.length > 0) {
-      const foundConfig = this.findConfigFile(paths[0]);
-      if (foundConfig) {
-        configPath = foundConfig;
-        this.log(`Auto-detected config file: ${configPath}`);
-      }
-    } else if (configPath) {
-      configPath = this.resolveSpecialPath(configPath);
+                            this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+                            if (result.appliedRectors && result.appliedRectors.length > 0) {
+                                this.log(`Applied rectors: ${result.appliedRectors.join(', ')}`);
+                            }
+                        } else {
+                            this.log('SUCCESS: No changes needed');
+                        }
 
-      if (!fs.existsSync(configPath)) {
-        const error = `Config file not found: ${configPath}`;
-        this.log(`ERROR: ${error}`);
-        return {
-          success: false,
-          changedFiles: 0,
-          error,
-        };
-      }
-    }
+                        return result;
+                    }
+                } catch (parseError) {}
+            }
 
-    if (configPath) {
-      args.push('--config=' + configPath);
-    }
-
-    let cwd: string;
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (workspaceFolders && workspaceFolders.length > 0) {
-      cwd = workspaceFolders[0].uri.fsPath;
-    } else if (paths.length > 0) {
-      const firstPath = paths[0];
-      cwd = fs.statSync(firstPath).isDirectory() ? firstPath : path.dirname(firstPath);
-    } else {
-      cwd = process.cwd();
+            const errorMsg = error.message || error.stderr || 'Unknown error';
+            this.log(`ERROR: ${errorMsg}`);
+            return {
+                success: false,
+                changedFiles: 0,
+                error: errorMsg,
+            };
+        }
     }
 
-    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
-    this.log(`Executing: ${commandStr}`);
-    this.log(`Working directory: ${cwd}`);
-    this.log(`Processing paths: ${paths.join(', ')}`);
+    async processPaths(paths: string[]): Promise<RectorResult> {
+        const config = this.getConfig();
+        const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
+        const args: string[] = ['process', ...paths];
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-      this.log(`WARNING: Process timed out after ${config.timeout}ms`);
-    }, config.timeout);
+        args.push('--output-format=json');
+        args.push('--no-progress-bar');
 
-    try {
-      const { stdout } = await execFile(resolvedExecutable, args, {
-        cwd,
-        maxBuffer: 10 * 1024 * 1024,
-        signal: controller.signal,
-      });
+        if (config.clearCache) {
+            args.push('--clear-cache');
+        }
 
-      clearTimeout(timeoutId);
+        let configPath = config.configPath;
+        if (!configPath && paths.length > 0) {
+            const foundConfig = this.findConfigFile(paths[0]);
+            if (foundConfig) {
+                configPath = foundConfig;
+                this.log(`Auto-detected config file: ${configPath}`);
+            }
+        } else if (configPath) {
+            configPath = this.resolveSpecialPath(configPath);
 
-      const output = this.parseJsonOutput(stdout);
+            if (!fs.existsSync(configPath)) {
+                const error = `Config file not found: ${configPath}`;
+                this.log(`ERROR: ${error}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error,
+                };
+            }
+        }
 
-      if (!output) {
-        this.log('ERROR: Failed to parse Rector output');
-        return {
-          success: false,
-          changedFiles: 0,
-          error: 'Failed to parse Rector output',
-        };
-      }
+        if (configPath) {
+            args.push('--config=' + configPath);
+        }
 
-      const result: RectorResult = {
-        success: true,
-        changedFiles: output.totals.changed_files,
-      };
+        let cwd: string;
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            cwd = workspaceFolders[0].uri.fsPath;
+        } else if (paths.length > 0) {
+            const firstPath = paths[0];
+            cwd = fs.statSync(firstPath).isDirectory() ? firstPath : path.dirname(firstPath);
+        } else {
+            cwd = process.cwd();
+        }
 
-      this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+        const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+        this.log(`Executing: ${commandStr}`);
+        this.log(`Working directory: ${cwd}`);
+        this.log(`Processing paths: ${paths.join(', ')}`);
 
-      return result;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            this.log(`WARNING: Process timed out after ${config.timeout}ms`);
+        }, config.timeout);
 
-      if (error.name === 'AbortError') {
-        const errorMsg = `Rector process timed out after ${config.timeout}ms`;
-        this.log(`ERROR: ${errorMsg}`);
-        return {
-          success: false,
-          changedFiles: 0,
-          error: errorMsg,
-        };
-      }
-
-      if (error.code === 'ENOENT') {
-        const errorMsg = `Rector executable not found: ${config.executablePath}`;
-        this.log(`ERROR: ${errorMsg}`);
-        return {
-          success: false,
-          changedFiles: 0,
-          error: errorMsg,
-        };
-      }
-
-      if (error.stdout) {
         try {
-          const output = this.parseJsonOutput(error.stdout);
-          if (output) {
+            const { stdout } = await execFile(resolvedExecutable, args, {
+                cwd,
+                maxBuffer: 10 * 1024 * 1024,
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            const output = this.parseJsonOutput(stdout);
+
+            if (!output) {
+                this.log('ERROR: Failed to parse Rector output');
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: 'Failed to parse Rector output',
+                };
+            }
+
             const result: RectorResult = {
-              success: true,
-              changedFiles: output.totals.changed_files,
+                success: true,
+                changedFiles: output.totals.changed_files,
             };
 
             this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
 
             return result;
-          }
-        } catch (parseError) {}
-      }
+        } catch (error: any) {
+            clearTimeout(timeoutId);
 
-      const errorMsg = error.message || error.stderr || 'Unknown error';
-      this.log(`ERROR: ${errorMsg}`);
-      return {
-        success: false,
-        changedFiles: 0,
-        error: errorMsg,
-      };
+            if (error.name === 'AbortError') {
+                const errorMsg = `Rector process timed out after ${config.timeout}ms`;
+                this.log(`ERROR: ${errorMsg}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: errorMsg,
+                };
+            }
+
+            if (error.code === 'ENOENT') {
+                const errorMsg = `Rector executable not found: ${config.executablePath}`;
+                this.log(`ERROR: ${errorMsg}`);
+                return {
+                    success: false,
+                    changedFiles: 0,
+                    error: errorMsg,
+                };
+            }
+
+            if (error.stdout) {
+                try {
+                    const output = this.parseJsonOutput(error.stdout);
+                    if (output) {
+                        const result: RectorResult = {
+                            success: true,
+                            changedFiles: output.totals.changed_files,
+                        };
+
+                        this.log(`SUCCESS: ${output.totals.changed_files} file(s) changed`);
+
+                        return result;
+                    }
+                } catch (parseError) {}
+            }
+
+            const errorMsg = error.message || error.stderr || 'Unknown error';
+            this.log(`ERROR: ${errorMsg}`);
+            return {
+                success: false,
+                changedFiles: 0,
+                error: errorMsg,
+            };
+        }
     }
-  }
 
-  private parseJsonOutput(stdout: string): RectorJsonOutput | null {
-    try {
-      const jsonMatch = stdout.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      return JSON.parse(stdout);
-    } catch (error) {
-      return null;
+    private parseJsonOutput(stdout: string): RectorJsonOutput | null {
+        try {
+            const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            return JSON.parse(stdout);
+        } catch (error) {
+            return null;
+        }
     }
-  }
 
-  async clearCache(): Promise<void> {
-    const config = this.getConfig();
-    const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
-    const args = ['process', '--clear-cache'];
+    async clearCache(): Promise<void> {
+        const config = this.getConfig();
+        const resolvedExecutable = this.resolveExecutablePath(config.executablePath);
+        const args = ['process', '--clear-cache'];
 
-    const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
-    this.log(`Executing: ${commandStr}`);
+        const commandStr = `${resolvedExecutable} ${args.join(' ')}`;
+        this.log(`Executing: ${commandStr}`);
 
-    try {
-      await execFile(resolvedExecutable, args);
-      this.log('SUCCESS: Cache cleared');
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        const errorMsg = `Rector executable not found: ${config.executablePath}`;
-        this.log(`ERROR: ${errorMsg}`);
-        throw new Error(errorMsg);
-      }
-      this.log('WARNING: Cache clearing might have failed, but continuing');
+        try {
+            await execFile(resolvedExecutable, args);
+            this.log('SUCCESS: Cache cleared');
+        } catch (error: any) {
+            if (error.code === 'ENOENT') {
+                const errorMsg = `Rector executable not found: ${config.executablePath}`;
+                this.log(`ERROR: ${errorMsg}`);
+                throw new Error(errorMsg);
+            }
+            this.log('WARNING: Cache clearing might have failed, but continuing');
+        }
     }
-  }
 }
