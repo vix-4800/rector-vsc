@@ -3,7 +3,7 @@
     "displayName": "Rector",
     "description": "Rector - Instant Upgrades and Automated Refactoring",
     "icon": "icon.png",
-    "version": "0.4.3",
+    "version": "0.4.4",
     "publisher": "vix",
     "repository": {
         "type": "git",
