@@ -61,24 +61,41 @@ Commands are available via:
 
 - Type: `string`
 - Default: `"rector"`
-- Description: Path to Rector executable
+- Description: Path to Rector executable. Supports VS Code variables.
 - Examples:
   - `"rector"` - global installation
   - `"./vendor/bin/rector"` - project installation (relative to workspace)
   - `"~/bin/rector"` - home directory expansion
+  - `"${workspaceFolder}/vendor/bin/rector"` - using workspace variable
   - `"/home/user/.config/composer/vendor/bin/rector"` - absolute path
 
 ### `rector.configPath`
 
 - Type: `string`
 - Default: `""`
-- Description: Path to Rector configuration file
-- Example:
+- Description: Path to Rector configuration file. Supports VS Code variables.
+- Examples:
   - `""` - empty (auto-detection)
   - `"./rector.php"` - relative to workspace
   - `"~/config/rector.php"` - home directory expansion
+  - `"${workspaceFolder}/rector.php"` - using workspace variable
+  - `"${workspaceFolder}/config/rector.php"` - config in subdirectory
   - `"/absolute/path/to/rector.php"` - absolute path
 - Note: If not specified, the extension searches for `rector.php` or `rector.php.dist` in parent directories
+
+### Supported Variables
+
+The following VS Code variables are supported in `rector.executablePath` and `rector.configPath`:
+
+- `${workspaceFolder}` - The path of the folder opened in VS Code
+- `${workspaceFolderBasename}` - The name of the folder opened in VS Code without slashes
+- `${file}` - The current opened file (context-dependent)
+- `${fileBasename}` - The current opened file's basename
+- `${fileBasenameNoExtension}` - The current opened file's basename with no extension
+- `${fileExtname}` - The current opened file's extension
+- `${fileDirname}` - The current opened file's directory
+- `${fileDirnameBasename}` - The current opened file's directory name
+- `${userHome}` - The path of the user's home directory
 
 ### `rector.enableAutofix`
 
@@ -114,8 +131,8 @@ Add to `.vscode/settings.json`:
 ```json
 {
   "rector.enabled": true,
-  "rector.executablePath": "./vendor/bin/rector",
-  "rector.configPath": "./rector.php",
+  "rector.executablePath": "${workspaceFolder}/vendor/bin/rector",
+  "rector.configPath": "${workspaceFolder}/rector.php",
   "rector.enableAutofix": false,
   "rector.showDiffOnSave": false,
   "rector.enableCodeLens": true

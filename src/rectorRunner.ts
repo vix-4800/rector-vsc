@@ -63,12 +63,53 @@ export class RectorRunner {
         return this.resolveSpecialPath(executablePath);
     }
 
-    private resolveSpecialPath(inputPath: string): string {
+    private resolveVariables(inputPath: string, contextFile?: string): string {
         if (!inputPath) {
             return inputPath;
         }
 
         let resolvedPath = inputPath;
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            const workspaceFolder = workspaceFolders[0].uri.fsPath;
+            const workspaceFolderBasename = path.basename(workspaceFolder);
+
+            resolvedPath = resolvedPath.replace(/\$\{workspaceFolder\}/g, workspaceFolder);
+            resolvedPath = resolvedPath.replace(
+                /\$\{workspaceFolderBasename\}/g,
+                workspaceFolderBasename
+            );
+        }
+
+        if (contextFile) {
+            const fileDir = path.dirname(contextFile);
+            const fileName = path.basename(contextFile);
+            const fileBasename = path.basename(contextFile, path.extname(contextFile));
+            const fileExtname = path.extname(contextFile);
+
+            resolvedPath = resolvedPath.replace(/\$\{file\}/g, contextFile);
+            resolvedPath = resolvedPath.replace(/\$\{fileBasename\}/g, fileName);
+            resolvedPath = resolvedPath.replace(/\$\{fileBasenameNoExtension\}/g, fileBasename);
+            resolvedPath = resolvedPath.replace(/\$\{fileExtname\}/g, fileExtname);
+            resolvedPath = resolvedPath.replace(/\$\{fileDirname\}/g, fileDir);
+            resolvedPath = resolvedPath.replace(
+                /\$\{fileDirnameBasename\}/g,
+                path.basename(fileDir)
+            );
+        }
+
+        resolvedPath = resolvedPath.replace(/\$\{userHome\}/g, os.homedir());
+
+        return resolvedPath;
+    }
+
+    private resolveSpecialPath(inputPath: string, contextFile?: string): string {
+        if (!inputPath) {
+            return inputPath;
+        }
+
+        let resolvedPath = this.resolveVariables(inputPath, contextFile);
 
         if (resolvedPath.startsWith('~/') || resolvedPath === '~') {
             resolvedPath = resolvedPath.replace(/^~/, os.homedir());
@@ -144,7 +185,7 @@ export class RectorRunner {
                 this.log(`Auto-detected config file: ${configPath}`);
             }
         } else {
-            configPath = this.resolveSpecialPath(configPath);
+            configPath = this.resolveSpecialPath(configPath, filePath);
 
             if (!fs.existsSync(configPath)) {
                 const error = `Config file not found: ${configPath}`;
@@ -293,7 +334,10 @@ export class RectorRunner {
                 this.log(`Auto-detected config file: ${configPath}`);
             }
         } else if (configPath) {
-            configPath = this.resolveSpecialPath(configPath);
+            configPath = this.resolveSpecialPath(
+                configPath,
+                paths.length > 0 ? paths[0] : undefined
+            );
 
             if (!fs.existsSync(configPath)) {
                 const error = `Config file not found: ${configPath}`;
