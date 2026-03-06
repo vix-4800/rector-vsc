@@ -107,6 +107,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable CodeLens buttons for running Rector in PHP files"
+        },
+        "rector.lintOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "(Experimental) Run Rector in dry-run mode on save and highlight lines that would be changed. Problems appear in the editor gutter and the Problems panel with quick-fix actions to apply or diff."
         }
       }
     },
