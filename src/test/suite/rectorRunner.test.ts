@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { RectorResult, RectorRunner } from '../../rectorRunner';
+import { RectorResult, RectorRunner, buildSpawnOptions } from '../../rectorRunner';
 
 suite('RectorRunner Unit Tests', () => {
   let rectorRunner: RectorRunner;
@@ -112,3 +112,21 @@ suite('RectorRunner Unit Tests', () => {
   });
 });
 
+suite('buildSpawnOptions', () => {
+  test('returns shell:true on Windows', () => {
+    assert.deepStrictEqual(buildSpawnOptions('win32'), { shell: true });
+  });
+
+  test('returns shell:false on Linux', () => {
+    assert.deepStrictEqual(buildSpawnOptions('linux'), { shell: false });
+  });
+
+  test('returns shell:false on macOS', () => {
+    assert.deepStrictEqual(buildSpawnOptions('darwin'), { shell: false });
+  });
+
+  test('returns shell:false for any unknown platform', () => {
+    assert.deepStrictEqual(buildSpawnOptions('freebsd'), { shell: false });
+    assert.deepStrictEqual(buildSpawnOptions(''), { shell: false });
+  });
+});

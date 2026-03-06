@@ -6,7 +6,13 @@ import { promisify } from 'util';
 import * as vscode from 'vscode';
 
 const execFile = promisify(cp.execFile);
-const IS_WINDOWS = os.platform() === 'win32';
+
+/** Returns child_process spawn options appropriate for the given platform. Exported for testing. */
+export function buildSpawnOptions(platform: string): { shell: boolean } {
+    return { shell: platform === 'win32' };
+}
+
+const SPAWN_OPTIONS = buildSpawnOptions(os.platform());
 
 export interface RectorResult {
   success: boolean;
@@ -221,7 +227,7 @@ export class RectorRunner {
                 cwd,
                 maxBuffer: 10 * 1024 * 1024,
                 signal: controller.signal,
-                shell: IS_WINDOWS,
+                ...SPAWN_OPTIONS,
             });
 
             clearTimeout(timeoutId);
@@ -383,7 +389,7 @@ export class RectorRunner {
                 cwd,
                 maxBuffer: 10 * 1024 * 1024,
                 signal: controller.signal,
-                shell: IS_WINDOWS,
+                ...SPAWN_OPTIONS,
             });
 
             clearTimeout(timeoutId);
@@ -477,7 +483,7 @@ export class RectorRunner {
         this.log(`Executing: ${commandStr}`);
 
         try {
-            await execFile(resolvedExecutable, args, { shell: IS_WINDOWS });
+            await execFile(resolvedExecutable, args, { ...SPAWN_OPTIONS });
             this.log('SUCCESS: Cache cleared');
         } catch (error: any) {
             if (error.code === 'ENOENT') {
