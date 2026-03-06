@@ -16,6 +16,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Tracks files currently being linted to avoid concurrent runs
   const runningLintJobs = new Set<string>();
 
+  const lintStatusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  lintStatusBarItem.text = '$(loading~spin) Rector';
+  lintStatusBarItem.tooltip = 'Rector is analysing the file…';
+  lintStatusBarItem.command = 'rector.showOutput';
+
   diffViewManager.dispose().catch(() => {});
   const processFileCommand = vscode.commands.registerCommand('rector.processFile', async () => {
     const editor = vscode.window.activeTextEditor;
@@ -201,6 +209,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       runningLintJobs.add(filePath);
+      lintStatusBarItem.show();
       try {
         const result = await rectorRunner.processFile(filePath, true);
         if (result.success) {
@@ -212,6 +221,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
       } finally {
         runningLintJobs.delete(filePath);
+        if (runningLintJobs.size === 0) {
+          lintStatusBarItem.hide();
+        }
       }
     }
   });
@@ -236,6 +248,7 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel,
     diffViewManager,
     diagnosticsProvider,
+    lintStatusBarItem,
     processFileCommand,
     processFileWithDiffCommand,
     processFilesCommand,
