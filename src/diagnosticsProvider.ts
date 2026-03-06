@@ -14,14 +14,11 @@ export class RectorDiagnosticsProvider implements vscode.CodeActionProvider, vsc
      * that Rector would remove/replace in the original file.
      * Each contiguous block of changed lines within a hunk becomes one diagnostic.
      */
-    parseDiff(diff: string, appliedRectors: string[]): vscode.Diagnostic[] {
+    parseDiff(diff: string): vscode.Diagnostic[] {
         const diagnostics: vscode.Diagnostic[] = [];
         const lines = diff.split('\n');
 
-        const shortNames = [...new Set(appliedRectors.map((r) => r.split('\\').pop() ?? r))];
-        const message = shortNames.length > 0
-            ? `Rector: ${shortNames.join(', ')}`
-            : 'Rector: suggestion';
+        const message = 'Rector: improvement available';
 
         let currentOriginalLine = 0;
         let hunkChangedLines: number[] = [];
@@ -83,8 +80,8 @@ export class RectorDiagnosticsProvider implements vscode.CodeActionProvider, vsc
         return diagnostics;
     }
 
-    updateDiagnostics(uri: vscode.Uri, diff: string, appliedRectors: string[]): void {
-        const diagnostics = this.parseDiff(diff, appliedRectors);
+    updateDiagnostics(uri: vscode.Uri, diff: string): void {
+        const diagnostics = this.parseDiff(diff);
         this.diagnosticCollection.set(uri, diagnostics);
     }
 

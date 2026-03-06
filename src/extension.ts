@@ -205,7 +205,7 @@ export function activate(context: vscode.ExtensionContext) {
         const result = await rectorRunner.processFile(filePath, true);
         if (result.success) {
           if (result.changedFiles > 0 && result.diff) {
-            diagnosticsProvider.updateDiagnostics(document.uri, result.diff, result.appliedRectors ?? []);
+            diagnosticsProvider.updateDiagnostics(document.uri, result.diff);
           } else {
             diagnosticsProvider.clearDiagnostics(document.uri);
           }
