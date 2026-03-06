@@ -17,8 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
   const runningLintJobs = new Set<string>();
 
   const lintStatusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left,
-    100
+    vscode.StatusBarAlignment.Right,
+    1000
   );
   lintStatusBarItem.text = '$(loading~spin) Rector';
   lintStatusBarItem.tooltip = 'Rector is analysing the file…';
