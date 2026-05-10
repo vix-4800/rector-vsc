@@ -9,7 +9,6 @@ code.
 - **Refactor multiple files and folders** via Explorer context menu
 - Preview changes before applying with diff view
 - Optional auto-fix on file save
-- **Lint on save** — highlights lines Rector would change without modifying the file, with quick-fix actions to apply or diff
 - **CodeLens buttons** for quick access to Rector commands directly in PHP files
 - Automatic Rector config file detection
 - Clear Rector cache
@@ -125,18 +124,6 @@ The following VS Code variables are supported in `rector.executablePath` and `re
   - **Run Rector** - Apply changes immediately
   - **Run Rector (Show Diff)** - Preview changes before applying
 
-### `rector.lintOnSave` _(Experimental)_
-
-- Type: `boolean`
-- Default: `false`
-- Description: Run Rector in dry-run mode on every save and highlight lines that would be changed, without modifying the file
-- Notes:
-  - Changed lines are shown as `Information` diagnostics in the editor gutter and the Problems panel with the message **"Rector: improvement available"**
-  - A spinner appears in the status bar while the analysis is running
-  - A quick-fix lightbulb (`Ctrl+.`) on any highlighted line offers **Apply Rector changes** and **Show Rector diff** actions
-  - Diagnostics are cleared automatically when the file is closed or changes are applied
-  - Cannot be combined with `rector.enableAutofix` — if autofix is enabled it takes priority
-
 ## Example Configuration
 
 Add to `.vscode/settings.json`:
@@ -148,8 +135,7 @@ Add to `.vscode/settings.json`:
   "rector.configPath": "${workspaceFolder}/rector.php",
   "rector.enableAutofix": false,
   "rector.showDiffOnSave": false,
-  "rector.enableCodeLens": true,
-  "rector.lintOnSave": false
+  "rector.enableCodeLens": true
 }
 ```
 

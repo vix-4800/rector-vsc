@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { RectorCodeLensProvider } from './codeLensProvider';
-import { RectorDiagnosticsProvider } from './diagnosticsProvider';
 import { DiffViewManager } from './diffViewManager';
 import { RectorRunner } from './rectorRunner';
 
@@ -11,18 +10,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   const rectorRunner = new RectorRunner(outputChannel);
   const diffViewManager = new DiffViewManager();
-  const diagnosticsProvider = new RectorDiagnosticsProvider();
-
-  // Tracks files currently being linted to avoid concurrent runs
-  const runningLintJobs = new Set<string>();
-
-  const lintStatusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    1000
-  );
-  lintStatusBarItem.text = '$(loading~spin) Rector';
-  lintStatusBarItem.tooltip = 'Rector is analysing the file…';
-  lintStatusBarItem.command = 'rector.showOutput';
 
   diffViewManager.dispose().catch(() => {});
   const processFileCommand = vscode.commands.registerCommand('rector.processFile', async () => {
@@ -51,7 +38,6 @@ export function activate(context: vscode.ExtensionContext) {
 
           if (result.success) {
             if (result.changedFiles > 0) {
-              diagnosticsProvider.clearDiagnostics(editor.document.uri);
               vscode.window.showInformationMessage(
                 `Rector: ${result.changedFiles} file(s) changed`
               );
@@ -94,7 +80,6 @@ export function activate(context: vscode.ExtensionContext) {
           if (result.changedFiles > 0 && result.diff) {
             await diffViewManager.showDiff(editor.document.uri, result.diff, async () => {
               await rectorRunner.processFile(editor.document.uri.fsPath, false);
-              diagnosticsProvider.clearDiagnostics(editor.document.uri);
               const document = await vscode.workspace.openTextDocument(editor.document.uri);
               await vscode.window.showTextDocument(document);
             });
@@ -181,7 +166,6 @@ export function activate(context: vscode.ExtensionContext) {
     const enabled = config.get<boolean>('enabled', true);
     const autofix = config.get<boolean>('enableAutofix', false);
     const showDiff = config.get<boolean>('showDiffOnSave', false);
-    const lintOnSave = config.get<boolean>('lintOnSave', false);
 
     if (!enabled || document.languageId !== 'php') {
       return;
@@ -193,43 +177,11 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         const result = await rectorRunner.processFile(document.uri.fsPath, false);
         if (result.success && result.changedFiles > 0) {
-          diagnosticsProvider.clearDiagnostics(document.uri);
           const doc = await vscode.workspace.openTextDocument(document.uri);
           await vscode.window.showTextDocument(doc);
         }
       }
-      return;
     }
-
-    if (lintOnSave) {
-      const filePath = document.uri.fsPath;
-
-      if (runningLintJobs.has(filePath)) {
-        return;
-      }
-
-      runningLintJobs.add(filePath);
-      lintStatusBarItem.show();
-      try {
-        const result = await rectorRunner.processFile(filePath, true);
-        if (result.success) {
-          if (result.changedFiles > 0 && result.diff) {
-            diagnosticsProvider.updateDiagnostics(document.uri, result.diff);
-          } else {
-            diagnosticsProvider.clearDiagnostics(document.uri);
-          }
-        }
-      } finally {
-        runningLintJobs.delete(filePath);
-        if (runningLintJobs.size === 0) {
-          lintStatusBarItem.hide();
-        }
-      }
-    }
-  });
-
-  const onCloseListener = vscode.workspace.onDidCloseTextDocument((document) => {
-    diagnosticsProvider.clearDiagnostics(document.uri);
   });
 
   const codeLensProvider = new RectorCodeLensProvider();
@@ -238,17 +190,9 @@ export function activate(context: vscode.ExtensionContext) {
     codeLensProvider
   );
 
-  const codeActionProviderDisposable = vscode.languages.registerCodeActionsProvider(
-    { language: 'php', scheme: 'file' },
-    diagnosticsProvider,
-    { providedCodeActionKinds: RectorDiagnosticsProvider.providedCodeActionKinds }
-  );
-
   context.subscriptions.push(
     outputChannel,
     diffViewManager,
-    diagnosticsProvider,
-    lintStatusBarItem,
     processFileCommand,
     processFileWithDiffCommand,
     processFilesCommand,
@@ -257,9 +201,7 @@ export function activate(context: vscode.ExtensionContext) {
     applyDiffChangesCommand,
     discardDiffChangesCommand,
     onSaveListener,
-    onCloseListener,
-    codeLensProviderDisposable,
-    codeActionProviderDisposable
+    codeLensProviderDisposable
   );
 }
 
