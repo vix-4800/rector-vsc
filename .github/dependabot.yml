@@ -1,17 +1,18 @@
+---
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
-    versioning-strategy: "increase"
+      interval: weekly
+    versioning-strategy: increase
     commit-message:
-      prefix: "deps"
+      prefix: deps
     open-pull-requests-limit: 5
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     commit-message:
-      prefix: "ci"
+      prefix: ci
