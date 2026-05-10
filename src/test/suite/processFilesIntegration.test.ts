@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { RectorRunner } from '../../rectorRunner';
+import { createTestOutputChannel } from './testOutputChannel';
 
 suite('ProcessFiles Integration Tests', () => {
   let outputChannel: vscode.OutputChannel;
@@ -11,7 +12,7 @@ suite('ProcessFiles Integration Tests', () => {
   let tempDir: string;
 
   setup(() => {
-    outputChannel = vscode.window.createOutputChannel('Test Rector');
+    outputChannel = createTestOutputChannel();
     rectorRunner = new RectorRunner(outputChannel);
 
     // Create a temporary directory for test files

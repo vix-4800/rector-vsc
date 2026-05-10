@@ -1,13 +1,14 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { RectorResult, RectorRunner, buildSpawnOptions } from '../../rectorRunner';
+import { createTestOutputChannel } from './testOutputChannel';
 
 suite('RectorRunner Unit Tests', () => {
   let rectorRunner: RectorRunner;
   let outputChannel: vscode.OutputChannel;
 
   setup(() => {
-    outputChannel = vscode.window.createOutputChannel('Test Rector');
+    outputChannel = createTestOutputChannel();
     rectorRunner = new RectorRunner(outputChannel);
   });
 

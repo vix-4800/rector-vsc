@@ -3,13 +3,14 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { RectorRunner } from '../../rectorRunner';
+import { createTestOutputChannel } from './testOutputChannel';
 
 suite('Path Resolver Tests', () => {
   let rectorRunner: RectorRunner;
   let outputChannel: vscode.OutputChannel;
 
   setup(() => {
-    outputChannel = vscode.window.createOutputChannel('Test Rector');
+    outputChannel = createTestOutputChannel();
     rectorRunner = new RectorRunner(outputChannel);
   });
 

@@ -10,8 +10,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   const rectorRunner = new RectorRunner(outputChannel);
   const diffViewManager = new DiffViewManager();
-
-  diffViewManager.dispose().catch(() => {});
   const processFileCommand = vscode.commands.registerCommand('rector.processFile', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
