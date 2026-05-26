@@ -1,5 +1,10 @@
 # Rector for VS Code
 
+[![Version](https://vsmarketplacebadges.dev/version/vix.rector-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=vix.rector-vscode)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/vix.rector-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=vix.rector-vscode)
+[![Rating](https://vsmarketplacebadges.dev/rating-short/vix.rector-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=vix.rector-vscode)
+![License](https://img.shields.io/github/license/vix-4800/rector-vsc)
+
 [Rector](https://github.com/rectorphp/rector) integration for Visual Studio Code. Provides automated refactoring for PHP
 code.
 
