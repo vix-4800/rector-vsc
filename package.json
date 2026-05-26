@@ -3,7 +3,7 @@
   "displayName": "Rector",
   "description": "Rector - Instant Upgrades and Automated Refactoring",
   "icon": "icon.png",
-  "version": "0.4.8",
+  "version": "1.0.0",
   "publisher": "vix",
   "galleryBanner": {
     "color": "#1e1e1e",
