@@ -6,8 +6,12 @@ out/test/**
 test.php
 src/**
 .github/**
+.vscode/**
+.agents/**
+.codex/**
 .gitignore
 tsconfig.json
+eslint.config.js
 **/*.map
 **/*.ts
 .eslintrc.json
