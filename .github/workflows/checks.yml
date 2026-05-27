@@ -59,9 +59,9 @@ jobs:
         run: npm run compile
 
       - name: Run tests on Linux
-        run: xvfb-run -a npx vscode-test
+        run: xvfb-run -a npm test
         if: runner.os == 'Linux'
 
       - name: Run tests on macOS and Windows
-        run: npx vscode-test
+        run: npm test
         if: runner.os != 'Linux'
